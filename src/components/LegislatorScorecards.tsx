@@ -19,16 +19,19 @@ import {
   MapPin,
   Flame,
   AlertCircle,
-  Star
+  Star,
+  ExternalLink
 } from "lucide-react";
 import { LegislatorScorecard } from "../types";
+import { getFullStateName, getPartyLabel, getPartyColors } from "../utils/states";
 
 interface LegislatorScorecardsProps {
   followedLegislators: string[];
   toggleFollowLegislator: (id: string) => void;
+  onViewPolitician: (id: string) => void;
 }
 
-export default function LegislatorScorecards({ followedLegislators = [], toggleFollowLegislator }: LegislatorScorecardsProps) {
+export default function LegislatorScorecards({ followedLegislators = [], toggleFollowLegislator, onViewPolitician }: LegislatorScorecardsProps) {
   const [legislators, setLegislators] = useState<LegislatorScorecard[]>([]);
   const [selectedLegId, setSelectedLegId] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
@@ -80,17 +83,6 @@ export default function LegislatorScorecards({ followedLegislators = [], toggleF
   }, {});
 
   const sortedStates = Object.keys(groupedByState).sort();
-
-  // Helper mapping for friendly state names
-  const stateNames: Record<string, string> = {
-    MA: "Massachusetts",
-    LA: "Louisiana",
-    VT: "Vermont",
-    NY: "New York",
-    UT: "Utah",
-  };
-
-  const getFullStateName = (code: string) => stateNames[code] || `State of ${code}`;
 
   return (
     <div className="space-y-6">
@@ -296,44 +288,53 @@ export default function LegislatorScorecards({ followedLegislators = [], toggleF
                           
                           const isFollowed = followedLegislators.includes(leg.id);
                           return (
-                            <button
-                              key={leg.id}
-                              onClick={() => setSelectedLegId(leg.id)}
-                              className={`w-full text-left p-4 flex items-center gap-3 transition-all cursor-pointer ${
-                                isSelected 
-                                  ? "bg-slate-900 text-white" 
-                                  : "hover:bg-slate-50 text-slate-800"
-                              }`}
-                            >
-                              {leg.imageUrl ? (
-                                <img 
-                                  src={leg.imageUrl} 
-                                  alt={leg.name} 
-                                  referrerPolicy="no-referrer"
-                                  className="h-10 w-10 rounded-full object-cover border border-slate-200 bg-slate-100 flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                                  <User className="h-5 w-5 text-slate-500" />
+                            <div key={leg.id} className={`transition-all ${isSelected ? "bg-slate-900" : "hover:bg-slate-50"}`}>
+                              <button
+                                onClick={() => setSelectedLegId(leg.id)}
+                                className={`w-full text-left p-4 flex items-center gap-3 cursor-pointer ${
+                                  isSelected ? "text-white" : "text-slate-800"
+                                }`}
+                              >
+                                {leg.imageUrl ? (
+                                  <img 
+                                    src={leg.imageUrl} 
+                                    alt={leg.name} 
+                                    referrerPolicy="no-referrer"
+                                    className="h-10 w-10 rounded-full object-cover border border-slate-200 bg-slate-100 flex-shrink-0"
+                                  />
+                                ) : (
+                                  <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                                    <User className="h-5 w-5 text-slate-500" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-sans font-bold text-xs truncate flex items-center gap-1">
+                                      {leg.name}
+                                      {isFollowed && (
+                                        <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
+                                      )}
+                                    </h4>
+                                    <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase flex-shrink-0 ${partyColor}`}>
+                                      {leg.party}-{leg.state}
+                                    </span>
+                                  </div>
+                                  <p className={`text-[10px] ${isSelected ? "text-slate-400" : "text-slate-500"} font-medium mt-1`}>
+                                    Chamber: {leg.chamber} • Attendance: {leg.attendanceRate}%
+                                  </p>
+                                </div>
+                              </button>
+                              {isSelected && (
+                                <div className="px-4 pb-3 flex gap-2">
+                                  <button
+                                    onClick={() => onViewPolitician(leg.id)}
+                                    className="flex items-center gap-1 text-[9px] font-bold text-blue-400 hover:text-blue-300 bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md transition cursor-pointer border border-slate-700"
+                                  >
+                                    <ExternalLink className="h-2.5 w-2.5" /> Full Profile
+                                  </button>
                                 </div>
                               )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="font-sans font-bold text-xs truncate flex items-center gap-1">
-                                    {leg.name}
-                                    {isFollowed && (
-                                      <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
-                                    )}
-                                  </h4>
-                                  <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase flex-shrink-0 ${partyColor}`}>
-                                    {leg.party}-{leg.state}
-                                  </span>
-                                </div>
-                                <p className={`text-[10px] ${isSelected ? "text-slate-400" : "text-slate-500"} font-medium mt-1`}>
-                                  Chamber: {leg.chamber} • Attendance: {leg.attendanceRate}%
-                                </p>
-                              </div>
-                            </button>
+                            </div>
                           );
                         })}
                       </div>
@@ -370,15 +371,14 @@ export default function LegislatorScorecards({ followedLegislators = [], toggleF
                         <h3 className="font-sans font-bold text-lg text-slate-900 leading-snug">
                           {selectedLeg.name}
                         </h3>
-                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border uppercase ${
-                          selectedLeg.party === "D" 
-                            ? "bg-blue-50 text-blue-700 border-blue-100" 
-                            : selectedLeg.party === "R" 
-                              ? "bg-red-50 text-red-700 border-red-100" 
-                              : "bg-amber-50 text-amber-700 border-amber-100"
-                        }`}>
-                          {selectedLeg.party === "D" ? "Democrat" : selectedLeg.party === "R" ? "Republican" : "Independent"} ({selectedLeg.party}-{selectedLeg.state})
-                        </span>
+                        {(() => {
+                          const pc = getPartyColors(selectedLeg.party);
+                          return (
+                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border uppercase ${pc.bg} ${pc.text} ${pc.border}`}>
+                              {getPartyLabel(selectedLeg.party)} ({selectedLeg.party}-{selectedLeg.state})
+                            </span>
+                          );
+                        })()}
                         
                         {/* Sports fantasy draft follow button */}
                         {(() => {
@@ -398,6 +398,15 @@ export default function LegislatorScorecards({ followedLegislators = [], toggleF
                             </button>
                           );
                         })()}
+
+                        {/* View full profile button */}
+                        <button
+                          onClick={() => onViewPolitician(selectedLeg.id)}
+                          className="px-2.5 py-1 text-[10px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-all border shadow-sm bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          <span>Full Profile</span>
+                        </button>
                       </div>
                       <p className="text-xs text-slate-500 mt-1 font-semibold uppercase tracking-wider font-mono">
                         Chamber Assignment: <span className="text-slate-800">{selectedLeg.chamber}</span> | State Jurisdiction: <span className="text-slate-800">{getFullStateName(selectedLeg.state)} ({selectedLeg.state})</span>
