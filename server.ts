@@ -3,6 +3,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import { OpenAI } from "openai";
 
 dotenv.config();
 
@@ -14,6 +15,10 @@ app.use(express.json());
 // Initialize Lazy Gemini Client with explicit User-Agent
 let aiClient: GoogleGenAI | null = null;
 let isGeminiExhausted = false;
+
+// Initialize Lazy OpenAI Client
+let openaiClient: OpenAI | null = null;
+let isOpenAIExhausted = false;
 
 function isExhaustionError(err: any): boolean {
   if (!err) return false;
@@ -46,6 +51,26 @@ function getGemini(): GoogleGenAI | null {
     });
   }
   return aiClient;
+}
+
+function getOpenAI(): OpenAI | null {
+  if (isOpenAIExhausted) {
+    return null;
+  }
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey || apiKey === "MY_OPENAI_API_KEY" || apiKey === "") {
+    return null;
+  }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey,
+    });
+  }
+  return openaiClient;
+}
+
+function hasAIProvider(): boolean {
+  return getGemini() !== null || getOpenAI() !== null;
 }
 
 // ==========================================
@@ -935,7 +960,7 @@ async function getParsedLegislators(): Promise<any[]> {
   }
 }
 
-// Helper: Run generic AI query with Search Grounding
+// Helper: Run generic AI query with Search Grounding or OpenAI structured fallback
 async function runGroundedQuery(prompt: string, schema: any, timeoutMs: number = 25000): Promise<any> {
   const cacheKey = JSON.stringify({ prompt, schema });
   const cachedVal = groundedQueryCache.get(cacheKey);
@@ -945,66 +970,104 @@ async function runGroundedQuery(prompt: string, schema: any, timeoutMs: number =
     return cachedVal.data;
   }
 
-  const ai = getGemini();
-  if (!ai) {
-    throw new Error("No Gemini Client");
-  }
-
-  // Create the main query promise with optimized two-step process and safety net
   const queryPromise = (async () => {
-    try {
-      console.log(`[GroundedQuery] Starting optimized two-step search-grounded query for: "${prompt.substring(0, 60)}..."`);
-      
-      // Step 1: Search Google for the raw details
-      const searchResponse = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: `Please search Google and return detailed information to answer this prompt: ${prompt}. Focus on real-world active legislative bills, dates, votes, or schedules.`,
-        config: {
-          tools: [{ googleSearch: {} }],
-          systemInstruction: "You are an professional, neutral congressional research assistant. Always use Google Search to find real, active congressional actions, schedules, or votes. Do not invent details."
-        }
-      });
-
-      const rawText = searchResponse.text;
-      if (!rawText) {
-        throw new Error("No text response from search step");
-      }
-
-      // Step 2: Format the text into the target JSON schema
-      const structuringResponse = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: `Using the provided raw source text below, structure the information into a valid JSON array conforming strictly to the requested schema. Use realistic dates, names, and titles matching the source text.
-        
-        Source Text:
-        ${rawText}
-        
-        Original Prompt context:
-        ${prompt}`,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: schema,
-          systemInstruction: "You are a precise data formatter. Your only job is to map the provided raw source text into the requested JSON schema accurately. Do not invent facts, but ensure the output conforms perfectly to the requested schema definition."
-        }
-      });
-
-      if (!structuringResponse.text) {
-        throw new Error("Empty response from structuring step");
-      }
-
-      const data = JSON.parse(structuringResponse.text.trim());
-      groundedQueryCache.set(cacheKey, { timestamp: Date.now(), data });
-      return data;
-    } catch (searchError: any) {
-      if (isExhaustionError(searchError)) {
-        isGeminiExhausted = true;
-        console.log(`[GroundedQuery] Gemini API Key limit reached or spending cap exceeded. Transitioning to offline fallback mode.`);
-        throw searchError;
-      }
-      console.log(`[GroundedQuery] Search grounding failed or timed out. Falling back to direct model generation. Info: ${searchError.message}`);
-      
-      // Safety net: Direct generation without search grounding
+    const ai = getGemini();
+    if (ai) {
       try {
-        const directResponse = await ai.models.generateContent({
+        console.log(`[GroundedQuery] Starting optimized two-step search-grounded query for: "${prompt.substring(0, 60)}..."`);
+        
+        // Step 1: Search Google for the raw details
+        const searchResponse = await ai.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: `Please search Google and return detailed information to answer this prompt: ${prompt}. Focus on real-world active legislative bills, dates, votes, or schedules.`,
+          config: {
+            tools: [{ googleSearch: {} }],
+            systemInstruction: "You are an professional, neutral congressional research assistant. Always use Google Search to find real, active congressional actions, schedules, or votes. Do not invent details."
+          }
+        });
+
+        const rawText = searchResponse.text;
+        if (!rawText) {
+          throw new Error("No text response from search step");
+        }
+
+        // Step 2: Format the text into the target JSON schema
+        const structuringResponse = await ai.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: `Using the provided raw source text below, structure the information into a valid JSON array conforming strictly to the requested schema. Use realistic dates, names, and titles matching the source text.
+          
+          Source Text:
+          ${rawText}
+          
+          Original Prompt context:
+          ${prompt}`,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: schema,
+            systemInstruction: "You are a precise data formatter. Your only job is to map the provided raw source text into the requested JSON schema accurately. Do not invent facts, but ensure the output conforms perfectly to the requested schema definition."
+          }
+        });
+
+        if (!structuringResponse.text) {
+          throw new Error("Empty response from structuring step");
+        }
+
+        const data = JSON.parse(structuringResponse.text.trim());
+        groundedQueryCache.set(cacheKey, { timestamp: Date.now(), data });
+        return data;
+      } catch (searchError: any) {
+        if (isExhaustionError(searchError)) {
+          isGeminiExhausted = true;
+          console.log(`[GroundedQuery] Gemini API Key limit reached or spending cap exceeded. Falling back to OpenAI failover...`);
+        } else {
+          console.log(`[GroundedQuery] Gemini Search grounding failed: ${searchError.message}. Trying OpenAI fallback...`);
+        }
+      }
+    }
+
+    // Try OpenAI Failover / Primary Alternative
+    const openai = getOpenAI();
+    if (openai) {
+      try {
+        console.log(`[GroundedQuery] Route optimized query through OpenAI: "${prompt.substring(0, 60)}..."`);
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: `You are a professional, neutral congressional research assistant. Generate a highly detailed, realistic, and representative list or data matching the prompt context.
+              You MUST output a valid JSON object or array matching exactly the requested JSON Schema. Do NOT include any markdown block ticks (like \`\`\`json) or extra conversational words. Just pure JSON content.`
+            },
+            {
+              role: "user",
+              content: `Create valid JSON data matching this context: "${prompt}". Conforming to schema: ${JSON.stringify(schema)}`
+            }
+          ],
+          response_format: { type: "json_object" }
+        });
+
+        const text = response.choices[0]?.message?.content;
+        if (text) {
+          const data = JSON.parse(text.trim());
+          groundedQueryCache.set(cacheKey, { timestamp: Date.now(), data });
+          return data;
+        }
+      } catch (openAiError: any) {
+        if (isExhaustionError(openAiError)) {
+          isOpenAIExhausted = true;
+          console.log(`[GroundedQuery] OpenAI API Key limit reached or spending cap exceeded.`);
+        } else {
+          console.log(`[GroundedQuery] OpenAI fallback query failed: ${openAiError.message}`);
+        }
+      }
+    }
+
+    // If both failed or are unavailable, fall back to direct Gemini simulation if Gemini is still somewhat available
+    const aiRescue = getGemini();
+    if (aiRescue) {
+      try {
+        console.log("[GroundedQuery] Rescuing with direct Gemini generation...");
+        const directResponse = await aiRescue.models.generateContent({
           model: "gemini-3.5-flash",
           contents: `Generate a high-quality, realistic, and representative list of items conforming strictly to the requested JSON schema. Focus on typical, highly relevant active US congressional actions or schedules matching this context: ${prompt}`,
           config: {
@@ -1014,23 +1077,17 @@ async function runGroundedQuery(prompt: string, schema: any, timeoutMs: number =
           }
         });
 
-        if (!directResponse.text) {
-          throw new Error("Empty response from direct generation fallback");
+        if (directResponse.text) {
+          const data = JSON.parse(directResponse.text.trim());
+          groundedQueryCache.set(cacheKey, { timestamp: Date.now(), data });
+          return data;
         }
-
-        const data = JSON.parse(directResponse.text.trim());
-        groundedQueryCache.set(cacheKey, { timestamp: Date.now(), data });
-        return data;
-      } catch (directError: any) {
-        if (isExhaustionError(directError)) {
-          isGeminiExhausted = true;
-          console.log(`[GroundedQuery] Gemini API Key limit reached or spending cap exceeded during direct generation. Transitioning to offline fallback mode.`);
-        } else {
-          console.log(`[GroundedQuery] Direct generation fallback failed: ${directError.message}`);
-        }
-        throw directError;
+      } catch (e) {
+        console.log("[GroundedQuery] Direct Gemini generation rescue failed.");
       }
     }
+
+    throw new Error("No active AI provider could fulfill the query");
   })();
 
   if (timeoutMs <= 0) {
@@ -1047,8 +1104,7 @@ async function runGroundedQuery(prompt: string, schema: any, timeoutMs: number =
 // 1. ACCOMPLISHMENTS ENDPOINT
 app.get("/api/legislation/accomplishments", async (req, res) => {
   try {
-    const ai = getGemini();
-    if (!ai) {
+    if (!hasAIProvider()) {
       return res.json({ source: "cache", data: FALLBACK_ACCOMPLISHMENTS });
     }
 
@@ -1086,8 +1142,7 @@ app.get("/api/legislation/accomplishments", async (req, res) => {
 // 2. LEGISLATIVE SCHEDULE / SESSIONS ENDPOINT
 app.get("/api/legislation/sessions", async (req, res) => {
   try {
-    const ai = getGemini();
-    if (!ai) {
+    if (!hasAIProvider()) {
       return res.json({ source: "cache", data: FALLBACK_SESSIONS });
     }
 
@@ -1141,8 +1196,7 @@ app.get("/api/legislation/votes", async (req, res) => {
   } catch (err: any) {
     console.warn("Failed fetching live GovTrack votes, trying AI search-grounded fallback:", err.message);
     try {
-      const ai = getGemini();
-      if (!ai) {
+      if (!hasAIProvider()) {
         return res.json({ source: "cache", data: FALLBACK_VOTES });
       }
 
@@ -1189,8 +1243,7 @@ app.get("/api/legislation/search", async (req, res) => {
   }
 
   try {
-    const ai = getGemini();
-    if (!ai) {
+    if (!hasAIProvider()) {
       // Filter offline mock
       const filtered = FALLBACK_ACCOMPLISHMENTS.filter(
         b => b.title.toLowerCase().includes(query.toLowerCase()) || 
@@ -1245,12 +1298,11 @@ app.get("/api/legislation/summarize", async (req, res) => {
   try {
     // Check if we have standard fallback summaries
     const cleanId = billId.toUpperCase().trim();
-    if (FALLBACK_SUMMARIES[cleanId] && !getGemini()) {
+    if (FALLBACK_SUMMARIES[cleanId] && !hasAIProvider()) {
       return res.json({ source: "cache", data: FALLBACK_SUMMARIES[cleanId] });
     }
 
-    const ai = getGemini();
-    if (!ai) {
+    if (!hasAIProvider()) {
       // Return default first one or generate a static structured mock summary for that item
       const foundMatch = FALLBACK_SUMMARIES[cleanId] || FALLBACK_SUMMARIES["H.R. 3935"];
       return res.json({ source: "cache_fallback", data: { ...foundMatch, billId: billId } });
@@ -1315,8 +1367,7 @@ app.post("/api/legislation/summarize-custom", async (req, res) => {
   }
 
   try {
-    const ai = getGemini();
-    if (!ai) {
+    if (!hasAIProvider()) {
       // Simulate real-time custom automatic summarizer fallback
       const mockSummary = {
         title: billTitle || "Custom Input Legislative Draft",
@@ -1381,8 +1432,7 @@ app.get("/api/legislation/legislators", async (req, res) => {
 // 5c. ALERTS & UPCOMING VOTES ENDPOINT
 app.get("/api/legislation/alerts", async (req, res) => {
   try {
-    const ai = getGemini();
-    if (!ai) {
+    if (!hasAIProvider()) {
       return res.json({ source: "cache", data: FALLBACK_ALERTS });
     }
 
@@ -1572,45 +1622,88 @@ app.post("/api/legislation/chat", async (req, res) => {
     return res.status(400).json({ error: "No user message sent" });
   }
 
+  const contextStr = billContext 
+    ? `The user is currently viewing the details of political bill: ${JSON.stringify(billContext)}.` 
+    : `The user is browsing general legislative status.`;
+
+  // Try Gemini First
   try {
     const ai = getGemini();
-    if (!ai) {
-      const reply = generateOfflineChatReply(message, billContext);
-      return res.json({ response: reply, source: "offline_simulate" });
-    }
+    if (ai) {
+      console.log("[Chat] Dispatching query to Gemini Assistant...");
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: `
+          You are 'CapitolExpert AI', an extremely objective, polite, and fully unbiased senior Congressional policy and debate researcher. Use your web search capabilities if needed to support factual claims about actual bills, representatives, or voting counts.
+          
+          ${contextStr}
+          
+          Rules:
+          - NEVER sound partisan. Always present arguments from both major US political parties fairly.
+          - Answer directly in plain English. Limit dry jargon.
+          - Encourage citizen engagement by explaining procedures.
+          
+          User inquiry: ${message}
+        `,
+        config: {
+          tools: [{ googleSearch: {} }],
+        }
+      });
 
-    const contextStr = billContext 
-      ? `The user is currently viewing the details of political bill: ${JSON.stringify(billContext)}.` 
-      : `The user is browsing general legislative status.`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: `
-        You are 'CapitolExpert AI', an extremely objective, polite, and fully unbiased senior Congressional policy and debate researcher. Use your web search capabilities if needed to support factual claims about actual bills, representatives, or voting counts.
-        
-        ${contextStr}
-        
-        Rules:
-        - NEVER sound partisan. Always present arguments from both major US political parties fairly.
-        - Answer directly in plain English. Limit dry jargon.
-        - Encourage citizen engagement by explaining procedures.
-        
-        User inquiry: ${message}
-      `,
-      config: {
-        tools: [{ googleSearch: {} }],
+      if (response.text) {
+        return res.json({ response: response.text, source: "live" });
       }
-    });
-
-    res.json({ response: response.text || "I was unable to analyze that legislative prompt.", source: "live" });
+    }
   } catch (err: any) {
     if (isExhaustionError(err)) {
       isGeminiExhausted = true;
     }
-    console.log("Chat assistant status: using offline simulated response due to API status or key limit.");
-    const reply = generateOfflineChatReply(message, billContext);
-    res.json({ response: reply, source: "offline_fallback" });
+    console.log(`[Chat] Gemini failed or hit limit: ${err.message}. Trying OpenAI fallback...`);
   }
+
+  // Try OpenAI Failover
+  try {
+    const openai = getOpenAI();
+    if (openai) {
+      console.log("[Chat] Dispatching query to OpenAI Failover...");
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are 'CapitolExpert AI', an extremely objective, polite, and fully unbiased senior Congressional policy and debate researcher.
+            
+            ${contextStr}
+            
+            Rules:
+            - NEVER sound partisan. Always present arguments from both major US political parties fairly.
+            - Answer directly in plain English. Limit dry jargon.
+            - Encourage citizen engagement by explaining procedures.
+            - Provide clear, high-quality, balanced and detailed analysis of legislative topics.`
+          },
+          {
+            role: "user",
+            content: message
+          }
+        ]
+      });
+
+      const reply = response.choices[0]?.message?.content;
+      if (reply) {
+        return res.json({ response: reply, source: "live_openai" });
+      }
+    }
+  } catch (err: any) {
+    if (isExhaustionError(err)) {
+      isOpenAIExhausted = true;
+    }
+    console.log(`[Chat] OpenAI failed or hit limit: ${err.message}.`);
+  }
+
+  // If both failed or are unavailable, fall back to high-fidelity offline simulation
+  console.log("Chat assistant status: using offline simulated response due to API status or key limit.");
+  const reply = generateOfflineChatReply(message, billContext);
+  res.json({ response: reply, source: "offline_fallback" });
 });
 
 // ==========================================
