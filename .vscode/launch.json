@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Attach to Direct iOS - Experimental",
+            "request": "attach",
+            "type": "reactnativedirect",
+            "cwd": "${workspaceFolder}",
+            "platform": "ios",
+            "useHermesEngine": false,
+            "port": 9221
+        },
+        {
             "name": "Launch Chrome",
             "request": "launch",
             "type": "chrome",
