@@ -5,6 +5,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { OpenAI } from "openai";
 
+// Load local secrets first for dev, then fallback to default .env.
+dotenv.config({ path: ".env.local" });
 dotenv.config();
 
 const app = express();
