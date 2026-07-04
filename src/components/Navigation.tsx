@@ -1,19 +1,19 @@
 import React from "react";
-import { Landmark, Sparkles, FileText, CalendarDays, BarChart3, HelpCircle, Activity, Award, Bell, TrendingUp } from "lucide-react";
+import { Landmark, Sparkles, FileText, CalendarDays, BarChart3, HelpCircle, Activity, Award, Bell, Vote, Map } from "lucide-react";
 
 interface NavigationProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isLive: boolean;
-  followedCount?: number;
 }
 
-export default function Navigation({ activeTab, setActiveTab, isLive, followedCount = 0 }: NavigationProps) {
+export default function Navigation({ activeTab, setActiveTab, isLive }: NavigationProps) {
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: Landmark },
     { id: "bills", label: "Plain-Language Directory", icon: FileText },
     { id: "legislators", label: "Civics Scorecards", icon: Award },
-    { id: "feed", label: "My Feed", icon: TrendingUp, badge: followedCount > 0 ? followedCount : undefined },
+    { id: "consensus", label: "Citizens' Ballot", icon: Vote },
+    { id: "alignment-map", label: "Civic Alignment Map", icon: Map },
     { id: "alerts", label: "Vote Predictor Alerts", icon: Bell },
     { id: "sessions", label: "Upcoming Calendar", icon: CalendarDays },
     { id: "votes", label: "Roll Call Votes", icon: BarChart3 },
@@ -45,7 +45,7 @@ export default function Navigation({ activeTab, setActiveTab, isLive, followedCo
                   key={tab.id}
                   id={`nav-tab-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-250 cursor-pointer relative ${
+                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-250 cursor-pointer ${
                     isActive
                       ? "bg-slate-800 text-amber-500 border-b-2 border-amber-500"
                       : "text-slate-300 hover:text-white hover:bg-slate-800"
@@ -53,11 +53,6 @@ export default function Navigation({ activeTab, setActiveTab, isLive, followedCo
                 >
                   <Icon className={`mr-2 h-4 w-4 ${isActive ? "text-amber-500" : "text-slate-400 group-hover:text-slate-300"}`} />
                   {tab.label}
-                  {tab.badge !== undefined && (
-                    <span className="ml-1.5 text-[9px] font-bold font-mono bg-amber-500 text-white px-1.5 py-0.5 rounded-full">
-                      {tab.badge}
-                    </span>
-                  )}
                 </button>
               );
             })}

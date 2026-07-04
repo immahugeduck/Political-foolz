@@ -74,6 +74,7 @@ export interface LegislatorScorecard {
   attendanceRate: number;
   billsSponsored: number;
   billsCosponsored: number;
+  committees?: string[];
   keyIssueAlignment: {
     issue: string;
     alignmentRate: number;
@@ -86,30 +87,21 @@ export interface LegislatorScorecard {
     date: string;
     impact: string;
   }[];
-  // Extended detail fields (populated on detail view)
-  district?: string;
-  termStart?: string;
-  termEnd?: string;
-  website?: string;
-  phone?: string;
-  partyLineAlignment?: number;
-  delegationAlignment?: number;
-  dataSource?: string;
-  lastUpdated?: string;
-}
-
-export interface FollowedFeedItem {
-  legislatorId: string;
-  legislatorName: string;
-  legislatorParty: string;
-  legislatorState: string;
-  legislatorChamber: string;
-  legislatorImageUrl?: string;
-  billId: string;
-  billTitle: string;
-  vote: 'Yea' | 'Nay' | 'Not Voting' | string;
-  date: string;
-  impact: string;
+  libertyProsperityIndex?: {
+    overallScore: number;
+    constituentBenefit: number;
+    freedomSafeguard: number;
+    happinessPursuit: number;
+    grade: string;
+    summary: string;
+  };
+  lobbyistPacFunding?: {
+    totalFunding: number;
+    pacPercentage: number;
+    individualPercentage: number;
+    topSectors: { sector: string; amount: number; percentage: number }[];
+    majorPacDonors: { donor: string; amount: number; industry: string }[];
+  };
 }
 
 export interface UpcomingVoteAlert {

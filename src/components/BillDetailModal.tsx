@@ -206,21 +206,21 @@ How can I help you understand this bill today?`,
                   {/* Bill Meta Data Grid */}
                   <div className="grid grid-cols-2 gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
                     <div>
-                      <span className="text-slate-450 text-[10px] font-mono block">SPONSOR</span>
+                      <span className="text-slate-400 text-[10px] font-mono block">SPONSOR</span>
                       <span className="text-sm font-medium text-slate-200 mt-0.5 block">{summary.sponsorName}</span>
                     </div>
                     <div>
-                      <span className="text-slate-455 text-[10px] font-mono block">CHAMBER & PARTY</span>
+                      <span className="text-slate-400 text-[10px] font-mono block">CHAMBER & PARTY</span>
                       <span className="text-sm font-medium text-slate-200 mt-0.5 block bg-slate-900 px-2 py-0.5 rounded border border-slate-800 inline-block">
                         {summary.sponsorPartyChamber}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-450 text-[10px] font-mono block">CURRENT STATUS</span>
-                      <span className="text-sm font-semibold text-emerald-450 mt-0.5 block">{summary.status}</span>
+                      <span className="text-slate-400 text-[10px] font-mono block">CURRENT STATUS</span>
+                      <span className="text-sm font-semibold text-emerald-400 mt-0.5 block">{summary.status}</span>
                     </div>
                     <div>
-                      <span className="text-slate-450 text-[10px] font-mono block">COST CLASSIFICATION</span>
+                      <span className="text-slate-400 text-[10px] font-mono block">COST CLASSIFICATION</span>
                       <span className="text-sm font-medium text-amber-500 mt-0.5 block flex items-center gap-1">
                         <DollarSign className="h-4 w-4" /> Billed CBO Review
                       </span>
@@ -232,7 +232,7 @@ How can I help you understand this bill today?`,
                     <h3 className="text-sm font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                       <ChevronRight className="h-4 w-4 text-amber-500" /> Executive Digest
                     </h3>
-                    <div className="text-sm text-slate-350 leading-relaxed bg-slate-950/20 p-4 rounded-xl border border-slate-850">
+                    <div className="text-sm text-slate-300 leading-relaxed bg-slate-950/20 p-4 rounded-xl border border-slate-850">
                       {summary.plainSummary}
                     </div>
                   </div>
@@ -261,7 +261,7 @@ How can I help you understand this bill today?`,
                       </h4>
                       <ul className="space-y-2">
                         {summary.pros.map((pro, idx) => (
-                          <li key={idx} className="text-xs text-slate-305 flex gap-1.5 leading-relaxed">
+                          <li key={idx} className="text-xs text-slate-300 flex gap-1.5 leading-relaxed">
                             <span className="text-emerald-500 font-bold">•</span>
                             <span>{pro}</span>
                           </li>
@@ -276,7 +276,7 @@ How can I help you understand this bill today?`,
                       </h4>
                       <ul className="space-y-2">
                         {summary.cons.map((con, idx) => (
-                          <li key={idx} className="text-xs text-slate-305 flex gap-1.5 leading-relaxed">
+                          <li key={idx} className="text-xs text-slate-300 flex gap-1.5 leading-relaxed">
                             <span className="text-red-500 font-bold">•</span>
                             <span>{con}</span>
                           </li>
@@ -291,7 +291,7 @@ How can I help you understand this bill today?`,
                       <h4 className="font-sans font-semibold text-sm text-amber-400 flex items-center gap-1.5">
                         <DollarSign className="h-4 w-4" /> Estimated Budget Outlook
                       </h4>
-                      <p className="text-xs text-slate-350 leading-relaxed">
+                      <p className="text-xs text-slate-300 leading-relaxed">
                         {summary.financialImpact}
                       </p>
                     </div>
@@ -314,7 +314,7 @@ How can I help you understand this bill today?`,
                           className={`p-3 rounded-2xl text-xs leading-relaxed whitespace-pre-line ${
                             msg.role === "user"
                               ? "bg-amber-500 text-slate-950 font-medium"
-                              : "bg-slate-900 text-slate-205 border border-slate-800"
+                              : "bg-slate-900 text-slate-200 border border-slate-800"
                           }`}
                         >
                           {msg.content}

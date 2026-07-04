@@ -8,15 +8,14 @@ import StandaloneChat from "./components/StandaloneChat";
 import BillDetailModal from "./components/BillDetailModal";
 import LegislatorScorecards from "./components/LegislatorScorecards";
 import UpcomingVoteAlerts from "./components/UpcomingVoteAlerts";
-import PoliticianDetailPage from "./components/PoliticianDetailPage";
-import FollowedFeed from "./components/FollowedFeed";
+import CitizensConsensus from "./components/CitizensConsensus";
+import CivicAlignmentMap from "./components/CivicAlignmentMap";
 import { Accomplishment, LegislativeSession, RollCallVote } from "./types";
 import { Landmark, Calendar, Settings, ArrowUpRight, ShieldCheck } from "lucide-react";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
-  const [selectedPoliticianId, setSelectedPoliticianId] = useState<string | null>(null);
 
   // Core Legislative Data States
   const [accomplishments, setAccomplishments] = useState<Accomplishment[]>([]);
@@ -82,12 +81,6 @@ export default function App() {
     }
     setFollowedLegislators(updated);
     localStorage.setItem("capitol_followed_legislators", JSON.stringify(updated));
-  };
-
-  // Navigate to a politician's detail page
-  const navigateToPolitician = (id: string) => {
-    setSelectedPoliticianId(id);
-    setActiveTab("politician");
   };
 
   async function loadAccomplishments() {
@@ -156,26 +149,12 @@ export default function App() {
           <LegislatorScorecards
             followedLegislators={followedLegislators}
             toggleFollowLegislator={toggleFollowLegislator}
-            onViewPolitician={navigateToPolitician}
           />
         );
-      case "politician":
-        return selectedPoliticianId ? (
-          <PoliticianDetailPage
-            politicianId={selectedPoliticianId}
-            onBack={() => setActiveTab("legislators")}
-            followedLegislators={followedLegislators}
-            toggleFollowLegislator={toggleFollowLegislator}
-          />
-        ) : null;
-      case "feed":
-        return (
-          <FollowedFeed
-            followedLegislators={followedLegislators}
-            toggleFollowLegislator={toggleFollowLegislator}
-            onViewPolitician={navigateToPolitician}
-          />
-        );
+      case "consensus":
+        return <CitizensConsensus />;
+      case "alignment-map":
+        return <CivicAlignmentMap />;
       case "alerts":
         return <UpcomingVoteAlerts />;
       case "sessions":
@@ -208,7 +187,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 overflow-x-hidden antialiased select-text">
       {/* 1. Header Navigation Component */}
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} isLive={isLive} followedCount={followedLegislators.length} />
+      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} isLive={isLive} />
 
       {/* 2. Primary Layout Framework (Professional Polish Theme alignment) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20">

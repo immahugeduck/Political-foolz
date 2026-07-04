@@ -186,7 +186,7 @@ export default function PlainLanguageDirectory({ onSelectBill }: PlainLanguageDi
                         {bill.title}
                       </h3>
                       {bill.sponsor && (
-                        <div className="text-[11px] text-slate-550 flex items-center gap-1 mt-1 font-medium">
+                        <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-1 font-medium">
                           <User className="h-3 w-3" /> Introduced by: {bill.sponsor}
                         </div>
                       )}
@@ -206,7 +206,7 @@ export default function PlainLanguageDirectory({ onSelectBill }: PlainLanguageDi
                     <button
                       onClick={() => onSelectBill(bill.id)}
                       id={`view-dir-analysis-${bill.id.replace(/\s+/g, '-').toLowerCase()}`}
-                      className="px-3 py-1.5 bg-slate-905 hover:bg-blue-600 text-white hover:shadow-sm text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-1.5 bg-slate-900 hover:bg-blue-600 text-white hover:shadow-sm text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                       <BookOpen className="h-3.5 w-3.5" />
                       <span>Translate to plain-language</span>
@@ -324,7 +324,7 @@ export default function PlainLanguageDirectory({ onSelectBill }: PlainLanguageDi
                   <h4 className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-widest">
                     1. Main Purpose
                   </h4>
-                  <p className="text-xs text-slate-755 leading-relaxed font-semibold">
+                  <p className="text-xs text-slate-700 leading-relaxed font-semibold">
                     {customResult.purpose}
                   </p>
                 </div>
@@ -334,7 +334,7 @@ export default function PlainLanguageDirectory({ onSelectBill }: PlainLanguageDi
                   <h4 className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-widest">
                     2. Key Provisions
                   </h4>
-                  <p className="text-xs text-slate-755 leading-relaxed">
+                  <p className="text-xs text-slate-700 leading-relaxed">
                     {customResult.provisions}
                   </p>
                 </div>
