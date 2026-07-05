@@ -1,5 +1,5 @@
 import React from "react";
-import { Landmark, Sparkles, FileText, CalendarDays, BarChart3, HelpCircle, Activity, Award, Bell, Vote, Map } from "lucide-react";
+import { Landmark, Sparkles, FileText, CalendarDays, BarChart3, HelpCircle, Activity, Award, Bell, Vote, Map, MapPin } from "lucide-react";
 
 interface NavigationProps {
   activeTab: string;
@@ -17,6 +17,7 @@ export default function Navigation({ activeTab, setActiveTab, isLive }: Navigati
     { id: "alerts", label: "Vote Predictor Alerts", icon: Bell },
     { id: "sessions", label: "Upcoming Calendar", icon: CalendarDays },
     { id: "votes", label: "Roll Call Votes", icon: BarChart3 },
+    { id: "voter-info", label: "Voter Info", icon: MapPin },
     { id: "chat", label: "CapitolExpert AI", icon: HelpCircle },
   ];
 

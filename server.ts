@@ -5,8 +5,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { OpenAI } from "openai";
 
-// Load local secrets first for dev, then fallback to default .env.
-dotenv.config({ path: ".env.local" });
 dotenv.config();
 
 const app = express();
@@ -30,7 +28,10 @@ function isExhaustionError(err: any): boolean {
     errMsg.includes("resource_exhausted") ||
     errMsg.includes("spending cap") ||
     errMsg.includes("quota") ||
-    errMsg.includes("limit")
+    errMsg.includes("limit") ||
+    errMsg.includes("401") ||
+    errMsg.includes("incorrect api key") ||
+    errMsg.includes("invalid_api_key")
   );
 }
 
@@ -1706,6 +1707,84 @@ app.post("/api/legislation/chat", async (req, res) => {
   console.log("Chat assistant status: using offline simulated response due to API status or key limit.");
   const reply = generateOfflineChatReply(message, billContext);
   res.json({ response: reply, source: "offline_fallback" });
+});
+
+// ==========================================
+// GOOGLE CIVIC INFORMATION API ROUTES
+// ==========================================
+
+app.get("/api/civic/elections", async (req, res) => {
+  const apiKey = process.env.GOOGLE_CIVIC_API_KEY;
+  if (!apiKey || apiKey === "") {
+    return res.status(503).json({ error: "GOOGLE_CIVIC_API_KEY is not configured" });
+  }
+
+  try {
+    const url = `https://www.googleapis.com/civicinfo/v2/elections?key=${apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Google Civic API responded with status: ${response.status}`);
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("Error fetching elections from Google Civic API:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch elections data" });
+  }
+});
+
+app.get("/api/civic/voterinfo", async (req, res) => {
+  const apiKey = process.env.GOOGLE_CIVIC_API_KEY;
+  if (!apiKey || apiKey === "") {
+    return res.status(503).json({ error: "GOOGLE_CIVIC_API_KEY is not configured" });
+  }
+
+  const { address, electionId } = req.query;
+  if (!address || typeof address !== "string") {
+    return res.status(400).json({ error: "Address is required" });
+  }
+
+  try {
+    let url = `https://www.googleapis.com/civicinfo/v2/voterinfo?address=${encodeURIComponent(address)}&key=${apiKey}`;
+    if (electionId) {
+      url += `&electionId=${encodeURIComponent(String(electionId))}`;
+    }
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Google Civic API responded with status: ${response.status}`);
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("Error fetching voter info from Google Civic API:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch voter info data" });
+  }
+});
+
+app.get("/api/civic/divisions", async (req, res) => {
+  const apiKey = process.env.GOOGLE_CIVIC_API_KEY;
+  if (!apiKey || apiKey === "") {
+    return res.status(503).json({ error: "GOOGLE_CIVIC_API_KEY is not configured" });
+  }
+
+  const { query } = req.query;
+  if (!query || typeof query !== "string") {
+    return res.status(400).json({ error: "Query is required" });
+  }
+
+  try {
+    const url = `https://www.googleapis.com/civicinfo/v2/divisions?query=${encodeURIComponent(query)}&key=${apiKey}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Google Civic API responded with status: ${response.status}`);
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("Error fetching divisions from Google Civic API:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch divisions data" });
+  }
 });
 
 // ==========================================

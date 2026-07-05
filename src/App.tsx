@@ -10,6 +10,7 @@ import LegislatorScorecards from "./components/LegislatorScorecards";
 import UpcomingVoteAlerts from "./components/UpcomingVoteAlerts";
 import CitizensConsensus from "./components/CitizensConsensus";
 import CivicAlignmentMap from "./components/CivicAlignmentMap";
+import VoterInformation from "./components/VoterInformation";
 import { Accomplishment, LegislativeSession, RollCallVote } from "./types";
 import { Landmark, Calendar, Settings, ArrowUpRight, ShieldCheck } from "lucide-react";
 
@@ -175,6 +176,8 @@ export default function App() {
         );
       case "chat":
         return <StandaloneChat />;
+      case "voter-info":
+        return <VoterInformation />;
       default:
         return (
           <div className="text-center py-20 text-slate-400">
