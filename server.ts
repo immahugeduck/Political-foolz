@@ -1787,6 +1787,117 @@ app.get("/api/civic/divisions", async (req, res) => {
   }
 });
 
+app.get("/api/civic/diagnostics", async (req, res) => {
+  const results: Record<string, { status: string; message: string }> = {};
+
+  // 1. Verify Gemini API Key
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey || geminiKey === "MY_GEMINI_API_KEY" || geminiKey.trim() === "") {
+    results.gemini = {
+      status: "missing",
+      message: "GEMINI_API_KEY is not configured in your environment settings."
+    };
+  } else {
+    try {
+      const testClient = new GoogleGenAI({
+        apiKey: geminiKey,
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+      });
+      await testClient.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: "Hello"
+      });
+      results.gemini = {
+        status: "valid",
+        message: "Your Gemini API key is valid and fully functional."
+      };
+    } catch (err: any) {
+      console.warn("[Diagnostics] Gemini key verification failed:", err.message || err);
+      const isAuthError = isExhaustionError(err) || 
+                          String(err.message).toLowerCase().includes("key") || 
+                          String(err.message).toLowerCase().includes("auth") || 
+                          String(err.message).includes("401") || 
+                          String(err.message).includes("403");
+      results.gemini = {
+        status: isAuthError ? "invalid" : "error",
+        message: err.message || "Failed to call Gemini API."
+      };
+    }
+  }
+
+  // 2. Verify OpenAI API Key
+  const openAIKey = process.env.OPENAI_API_KEY;
+  if (!openAIKey || openAIKey === "MY_OPENAI_API_KEY" || openAIKey.trim() === "") {
+    results.openai = {
+      status: "missing",
+      message: "OPENAI_API_KEY is not configured in your environment settings."
+    };
+  } else {
+    try {
+      const testOpenAI = new OpenAI({ apiKey: openAIKey });
+      await testOpenAI.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 3
+      });
+      results.openai = {
+        status: "valid",
+        message: "Your OpenAI API key is valid and fully functional."
+      };
+    } catch (err: any) {
+      console.warn("[Diagnostics] OpenAI key verification failed:", err.message || err);
+      const isAuthError = isExhaustionError(err) || 
+                          String(err.message).toLowerCase().includes("key") || 
+                          String(err.message).toLowerCase().includes("auth") || 
+                          String(err.message).includes("401") || 
+                          String(err.message).includes("403");
+      results.openai = {
+        status: isAuthError ? "invalid" : "error",
+        message: err.message || "Failed to call OpenAI API."
+      };
+    }
+  }
+
+  // 3. Verify Google Civic API Key
+  const civicKey = process.env.GOOGLE_CIVIC_API_KEY;
+  if (!civicKey || civicKey.trim() === "") {
+    results.googleCivic = {
+      status: "missing",
+      message: "GOOGLE_CIVIC_API_KEY is not configured in your environment settings."
+    };
+  } else {
+    try {
+      const url = `https://www.googleapis.com/civicinfo/v2/elections?key=${civicKey}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        results.googleCivic = {
+          status: "valid",
+          message: "Your Google Civic Information API key is valid and fully functional."
+        };
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        const errMsg = errorData?.error?.message || `HTTP status ${response.status}`;
+        const isAuthError = response.status === 400 || 
+                            response.status === 403 || 
+                            errMsg.toLowerCase().includes("key") || 
+                            errMsg.toLowerCase().includes("invalid");
+        results.googleCivic = {
+          status: isAuthError ? "invalid" : "error",
+          message: `Validation failed: ${errMsg}`
+        };
+      }
+    } catch (err: any) {
+      console.warn("[Diagnostics] Google Civic API verification failed:", err.message || err);
+      results.googleCivic = {
+        status: "error",
+        message: err.message || "Failed to connect to Google Civic Information API."
+      };
+    }
+  }
+
+  res.json({ success: true, results });
+});
+
 // ==========================================
 // VITE DEV SERVER & BACKGROUND PRE-WARMING
 // ==========================================
