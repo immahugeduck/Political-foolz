@@ -485,6 +485,177 @@ const FALLBACK_ALERTS = [
 const groundedQueryCache = new Map<string, { timestamp: number; data: any }>();
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 mins cache TTL for search grounding responses
 
+type AudienceMode = "eli5" | "eli15" | "policy_wonk" | "standard";
+
+function normalizeAudienceMode(value: any): AudienceMode {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "eli5" || normalized === "5") return "eli5";
+  if (normalized === "eli15" || normalized === "15") return "eli15";
+  if (normalized === "policy_wonk" || normalized === "policy-wonk" || normalized === "wonk") return "policy_wonk";
+  return "standard";
+}
+
+function getAudienceInstruction(mode: AudienceMode): string {
+  if (mode === "eli5") {
+    return "Explain using very simple words and concrete examples suitable for a young child, while staying factually accurate.";
+  }
+  if (mode === "eli15") {
+    return "Explain with clear high-school level language, defining policy terms briefly when they appear.";
+  }
+  if (mode === "policy_wonk") {
+    return "Use policy-analyst depth, cite provisions and process mechanics, and include implementation caveats.";
+  }
+  return "Use plain-language civic explanations suitable for the general public.";
+}
+
+function isLikelyControversial(text: string): boolean {
+  const normalized = text.toLowerCase();
+  const controversialMarkers = [
+    "abortion",
+    "immigration",
+    "gun",
+    "firearm",
+    "tax",
+    "transgender",
+    "lgbt",
+    "israel",
+    "gaza",
+    "ukraine",
+    "healthcare",
+    "medicare",
+    "social security",
+    "speech",
+    "censorship",
+    "religion"
+  ];
+  return controversialMarkers.some((marker) => normalized.includes(marker));
+}
+
+function clampConfidence(value: any, fallback: number = 70): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed < 0) return 0;
+  if (parsed > 100) return 100;
+  return Math.round(parsed);
+}
+
+function collectSourceReferences(rawSources: unknown, supportingText: string[] = []): string[] {
+  const out = new Set<string>();
+  const urlRegex = /https?:\/\/[^\s)]+/gi;
+  const billRegex = /\b(?:H\.?\s*R\.?|S\.?|H\.?\s*J\.?\s*RES\.?|S\.?\s*J\.?\s*RES\.?|H\.?\s*CON\.?\s*RES\.?|S\.?\s*CON\.?\s*RES\.?)\s*\.?-?\s*\d+\b/gi;
+
+  const addCandidate = (value: string) => {
+    const trimmed = value.trim().replace(/[),.;]+$/g, "");
+    if (!trimmed) return;
+    if (/^https?:\/\//i.test(trimmed)) {
+      try {
+        const parsed = new URL(trimmed);
+        if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+          out.add(parsed.toString());
+        }
+      } catch {
+        return;
+      }
+      return;
+    }
+
+    const billMatch = trimmed.match(billRegex);
+    if (billMatch && billMatch.length > 0) {
+      billMatch.forEach((bill) => out.add(bill.toUpperCase().replace(/\s+/g, " ").trim()));
+    }
+  };
+
+  if (Array.isArray(rawSources)) {
+    rawSources.forEach((source) => addCandidate(String(source)));
+  } else if (typeof rawSources === "string") {
+    addCandidate(rawSources);
+  }
+
+  for (const text of supportingText) {
+    if (!text) continue;
+    const urls = text.match(urlRegex) || [];
+    const bills = text.match(billRegex) || [];
+    urls.forEach(addCandidate);
+    bills.forEach(addCandidate);
+  }
+
+  return Array.from(out).slice(0, 8);
+}
+
+function normalizeStructuredAnalysis(raw: any, fallbackSubject: string): any {
+  const base = raw && typeof raw === "object" ? raw : {};
+  const fallbackExecutive = `Analysis for ${fallbackSubject} with balanced evidence and identified uncertainties.`;
+  return {
+    executiveSummary: String(base.executiveSummary || fallbackExecutive),
+    plainLanguageBreakdown: String(base.plainLanguageBreakdown || base.plainSummary || "Plain-language breakdown unavailable."),
+    technicalDeepDive: String(base.technicalDeepDive || "Technical deep dive unavailable."),
+    prosConsStakeholderImpacts: Array.isArray(base.prosConsStakeholderImpacts) ? base.prosConsStakeholderImpacts : [],
+    financialBudgetImplications: String(base.financialBudgetImplications || base.financialImpact || "Budget implications uncertain."),
+    historicalPoliticalContext: String(base.historicalPoliticalContext || "Historical context unavailable."),
+    supporterView: String(base.supporterView || "Supporter framing unavailable."),
+    opponentView: String(base.opponentView || "Opponent framing unavailable."),
+    neutralAnalysis: String(base.neutralAnalysis || "Neutral synthesis unavailable."),
+    confidenceScore: clampConfidence(base.confidenceScore),
+    uncertaintyNotes: String(base.uncertaintyNotes || "Uncertainty details were not provided."),
+    followUpQuestions: Array.isArray(base.followUpQuestions) ? base.followUpQuestions.map((q: any) => String(q)) : [],
+    sources: collectSourceReferences(base.sources, [
+      String(base.executiveSummary || ""),
+      String(base.technicalDeepDive || ""),
+      String(base.historicalPoliticalContext || ""),
+      JSON.stringify(base.prosConsStakeholderImpacts || [])
+    ])
+  };
+}
+
+function formatChatStructuredAnalysis(analysis: any): string {
+  const stakeholderLines = Array.isArray(analysis.prosConsStakeholderImpacts) && analysis.prosConsStakeholderImpacts.length > 0
+    ? analysis.prosConsStakeholderImpacts.map((item: any, idx: number) => {
+        const stakeholder = String(item?.stakeholder || `Stakeholder ${idx + 1}`);
+        const impact = String(item?.impact || "Impact unspecified.");
+        const evidence = String(item?.evidence || "Evidence not specified.");
+        const pros = Array.isArray(item?.pros) ? item.pros.map((x: any) => String(x)).join("; ") : "";
+        const cons = Array.isArray(item?.cons) ? item.cons.map((x: any) => String(x)).join("; ") : "";
+        const prosLine = pros ? ` Pros: ${pros}.` : "";
+        const consLine = cons ? ` Cons: ${cons}.` : "";
+        return `${idx + 1}. ${stakeholder}: ${impact}.${prosLine}${consLine} Evidence: ${evidence}`;
+      }).join("\n")
+    : "1. Stakeholder-specific impacts are uncertain with currently available evidence.";
+
+  const sourcesLine = analysis.sources.length > 0 ? analysis.sources.map((s: string) => `- ${s}`).join("\n") : "- No verified source URLs or bill IDs were found.";
+  const followUps = analysis.followUpQuestions.length > 0 ? analysis.followUpQuestions.map((q: string, idx: number) => `${idx + 1}. ${q}`).join("\n") : "1. Which section should I drill into next?";
+
+  return `1) Executive summary
+${analysis.executiveSummary}
+
+2) Plain-language breakdown (for dummies)
+${analysis.plainLanguageBreakdown}
+
+3) Technical/provisions deep dive
+${analysis.technicalDeepDive}
+
+4) Pros, cons, and stakeholder impacts (with evidence)
+${stakeholderLines}
+
+5) Financial/budget implications
+${analysis.financialBudgetImplications}
+
+6) Historical/political context
+${analysis.historicalPoliticalContext}
+
+7) Sources + confidence score (0-100)
+Confidence: ${analysis.confidenceScore}
+Uncertainty: ${analysis.uncertaintyNotes}
+${sourcesLine}
+
+8) Suggested follow-up questions
+${followUps}
+
+Multi-perspective views
+Supporter view: ${analysis.supporterView}
+Opponent view: ${analysis.opponentView}
+Neutral analysis: ${analysis.neutralAnalysis}`;
+}
+
 // Global variables for the US legislators CSV cache
 let cachedLegislatorsList: any[] = [];
 let lastFetchedTime = 0;
@@ -964,8 +1135,18 @@ async function getParsedLegislators(): Promise<any[]> {
 }
 
 // Helper: Run generic AI query with Search Grounding or OpenAI structured fallback
-async function runGroundedQuery(prompt: string, schema: any, timeoutMs: number = 25000): Promise<any> {
-  const cacheKey = JSON.stringify({ prompt, schema });
+async function runGroundedQuery(
+  prompt: string,
+  schema: any,
+  timeoutMs: number = 25000,
+  options: { audienceMode?: AudienceMode; billText?: string; controversial?: boolean } = {}
+): Promise<any> {
+  const audienceMode = normalizeAudienceMode(options.audienceMode);
+  const fullPrompt = options.billText
+    ? `${prompt}\n\nFull bill text (use this for deeper and more precise analysis when relevant):\n${options.billText}`
+    : prompt;
+  const controversial = typeof options.controversial === "boolean" ? options.controversial : isLikelyControversial(prompt);
+  const cacheKey = JSON.stringify({ prompt: fullPrompt, schema, audienceMode, controversial });
   const cachedVal = groundedQueryCache.get(cacheKey);
 
   if (cachedVal && (Date.now() - cachedVal.timestamp < CACHE_TTL_MS)) {
@@ -977,15 +1158,18 @@ async function runGroundedQuery(prompt: string, schema: any, timeoutMs: number =
     const ai = getGemini();
     if (ai) {
       try {
-        console.log(`[GroundedQuery] Starting optimized two-step search-grounded query for: "${prompt.substring(0, 60)}..."`);
+        console.log(`[GroundedQuery] Starting optimized two-step search-grounded query for: "${fullPrompt.substring(0, 60)}..."`);
         
         // Step 1: Search Google for the raw details
         const searchResponse = await ai.models.generateContent({
           model: "gemini-3.5-flash",
-          contents: `Please search Google and return detailed information to answer this prompt: ${prompt}. Focus on real-world active legislative bills, dates, votes, or schedules.`,
+          contents: `Use internal step-by-step reasoning, but do not expose chain-of-thought. Search Google and gather verifiable evidence for this legislative request:\n${fullPrompt}\n\nCollect specific source URLs and/or canonical bill IDs. Flag uncertain points explicitly.`,
           config: {
             tools: [{ googleSearch: {} }],
-            systemInstruction: "You are an professional, neutral congressional research assistant. Always use Google Search to find real, active congressional actions, schedules, or votes. Do not invent details."
+            systemInstruction: `You are a neutral congressional research assistant. ${getAudienceInstruction(audienceMode)}
+Always ground claims in verifiable evidence from official or reputable sources.
+Do not invent details. For controversial topics, present supporter and opponent framings fairly and add a neutral synthesis.
+Apply strict anti-bias behavior: avoid partisan framing, emotionally loaded language, and unsupported value judgments.`
           }
         });
 
@@ -997,17 +1181,24 @@ async function runGroundedQuery(prompt: string, schema: any, timeoutMs: number =
         // Step 2: Format the text into the target JSON schema
         const structuringResponse = await ai.models.generateContent({
           model: "gemini-3.5-flash",
-          contents: `Using the provided raw source text below, structure the information into a valid JSON array conforming strictly to the requested schema. Use realistic dates, names, and titles matching the source text.
+          contents: `Using the provided raw source text below, structure the information into valid JSON conforming strictly to the requested schema.
+          Use internal reasoning, but only output final JSON.
+          Preserve evidence quality and uncertainty from the source text.
+          Include source URLs or bill IDs when the schema has source-oriented fields.
           
           Source Text:
           ${rawText}
           
           Original Prompt context:
-          ${prompt}`,
+          ${fullPrompt}`,
           config: {
             responseMimeType: "application/json",
             responseSchema: schema,
-            systemInstruction: "You are a precise data formatter. Your only job is to map the provided raw source text into the requested JSON schema accurately. Do not invent facts, but ensure the output conforms perfectly to the requested schema definition."
+            systemInstruction: `You are a precise data formatter with neutrality safeguards.
+Map the provided source text into the requested JSON schema accurately.
+Do not invent facts.
+When confidence is low, preserve uncertainty in dedicated fields if available.
+If the request is controversial (${controversial ? "yes" : "no"}), preserve balanced viewpoints where schema fields allow.`
           }
         });
 
@@ -1032,18 +1223,26 @@ async function runGroundedQuery(prompt: string, schema: any, timeoutMs: number =
     const openai = getOpenAI();
     if (openai) {
       try {
-        console.log(`[GroundedQuery] Route optimized query through OpenAI: "${prompt.substring(0, 60)}..."`);
+        console.log(`[GroundedQuery] Route optimized query through OpenAI: "${fullPrompt.substring(0, 60)}..."`);
         const response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [
             {
               role: "system",
-              content: `You are a professional, neutral congressional research assistant. Generate a highly detailed, realistic, and representative list or data matching the prompt context.
-              You MUST output a valid JSON object or array matching exactly the requested JSON Schema. Do NOT include any markdown block ticks (like \`\`\`json) or extra conversational words. Just pure JSON content.`
+              content: `You are a professional, neutral congressional research assistant.
+Use internal step-by-step reasoning but never reveal chain-of-thought.
+${getAudienceInstruction(audienceMode)}
+Apply anti-bias safeguards and present balanced perspectives for controversial topics.
+You MUST output valid JSON matching the requested schema exactly.
+Do NOT include markdown fences or prose outside JSON.`
             },
             {
               role: "user",
-              content: `Create valid JSON data matching this context: "${prompt}". Conforming to schema: ${JSON.stringify(schema)}`
+              content: `Create valid JSON data for this context:
+${fullPrompt}
+
+Schema:
+${JSON.stringify(schema)}`
             }
           ],
           response_format: { type: "json_object" }
@@ -1072,11 +1271,15 @@ async function runGroundedQuery(prompt: string, schema: any, timeoutMs: number =
         console.log("[GroundedQuery] Rescuing with direct Gemini generation...");
         const directResponse = await aiRescue.models.generateContent({
           model: "gemini-3.5-flash",
-          contents: `Generate a high-quality, realistic, and representative list of items conforming strictly to the requested JSON schema. Focus on typical, highly relevant active US congressional actions or schedules matching this context: ${prompt}`,
+          contents: `Generate high-quality, realistic legislative data conforming strictly to the requested JSON schema.
+Use internal reasoning but return JSON only.
+Context: ${fullPrompt}`,
           config: {
             responseMimeType: "application/json",
             responseSchema: schema,
-            systemInstruction: "You are a professional congressional research assistant. Generate realistic legislative data for the requested schema."
+            systemInstruction: `You are a professional neutral congressional research assistant.
+${getAudienceInstruction(audienceMode)}
+Do not invent unsupported details.`
           }
         });
 
@@ -1311,9 +1514,28 @@ app.get("/api/legislation/summarize", async (req, res) => {
       return res.json({ source: "cache_fallback", data: { ...foundMatch, billId: billId } });
     }
 
-    const prompt = `Find full real details of the congressional bill "${billId}". 
-    Create a highly engaging, neutral plain-language summary of this bill for an 8th-grade level. 
-    Detail its physical sponsors, status, a quick slogan, detailed summaries, bullet points of physical provisions, key visual arguments for (pros) and against (cons), and CBO financial budget outlook estimates.`;
+    const audienceMode = normalizeAudienceMode(req.query.mode);
+    const zipCode = req.query.zip ? String(req.query.zip) : "";
+    const stateCode = req.query.state ? String(req.query.state) : "";
+    const compareBillId = req.query.compareTo ? String(req.query.compareTo) : "";
+    const fullBillText = req.query.fullText ? String(req.query.fullText) : "";
+    const controversial = isLikelyControversial(billId);
+
+    const prompt = `Find full real details of the congressional bill "${billId}" and produce a structured policy analysis.
+Use this output format exactly:
+1. Executive summary (2-3 sentences)
+2. Plain-language breakdown ("for dummies")
+3. Technical/provisions deep dive
+4. Pros, cons, and stakeholder impacts (with evidence)
+5. Financial/budget implications
+6. Historical/political context
+7. Sources + confidence score (0-100) + uncertainty notes
+8. Suggested follow-up questions
+
+Include supporter view, opponent view, and neutral analysis for controversial bills.
+${compareBillId ? `Compare this bill against "${compareBillId}" and include the contrast in the technical and historical sections.` : ""}
+${zipCode || stateCode ? `Add a localized civic impact note for someone in ${[zipCode, stateCode].filter(Boolean).join(", ")}.` : ""}
+Return valid JSON matching the schema.`;
 
     const SummarySchema = {
       type: Type.OBJECT,
@@ -1328,13 +1550,55 @@ app.get("/api/legislation/summarize", async (req, res) => {
         keyProvisions: { type: Type.ARRAY, items: { type: Type.STRING } },
         pros: { type: Type.ARRAY, items: { type: Type.STRING } },
         cons: { type: Type.ARRAY, items: { type: Type.STRING } },
-        financialImpact: { type: Type.STRING }
+        financialImpact: { type: Type.STRING },
+        executiveSummary: { type: Type.STRING },
+        plainLanguageBreakdown: { type: Type.STRING },
+        technicalDeepDive: { type: Type.STRING },
+        prosConsStakeholderImpacts: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              stakeholder: { type: Type.STRING },
+              impact: { type: Type.STRING },
+              pros: { type: Type.ARRAY, items: { type: Type.STRING } },
+              cons: { type: Type.ARRAY, items: { type: Type.STRING } },
+              evidence: { type: Type.STRING }
+            }
+          }
+        },
+        financialBudgetImplications: { type: Type.STRING },
+        historicalPoliticalContext: { type: Type.STRING },
+        supporterView: { type: Type.STRING },
+        opponentView: { type: Type.STRING },
+        neutralAnalysis: { type: Type.STRING },
+        confidenceScore: { type: Type.NUMBER },
+        uncertaintyNotes: { type: Type.STRING },
+        sources: { type: Type.ARRAY, items: { type: Type.STRING } },
+        followUpQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+        localImpact: { type: Type.STRING },
+        keyVotesToWatch: { type: Type.ARRAY, items: { type: Type.STRING } }
       },
       required: ["billId", "officialTitle", "status", "oneLiner", "plainSummary", "keyProvisions", "pros", "cons"]
     };
 
-    const data = await runGroundedQuery(prompt, SummarySchema);
-    res.json({ source: "live", data });
+    const data = await runGroundedQuery(prompt, SummarySchema, 25000, {
+      audienceMode,
+      billText: fullBillText,
+      controversial
+    });
+    const normalized = normalizeStructuredAnalysis(data, billId);
+    const merged = {
+      ...data,
+      confidenceScore: normalized.confidenceScore,
+      uncertaintyNotes: normalized.uncertaintyNotes,
+      sources: normalized.sources,
+      followUpQuestions: normalized.followUpQuestions,
+      supporterView: data?.supporterView || normalized.supporterView,
+      opponentView: data?.opponentView || normalized.opponentView,
+      neutralAnalysis: data?.neutralAnalysis || normalized.neutralAnalysis
+    };
+    res.json({ source: "live", data: merged });
   } catch (err: any) {
     if (isExhaustionError(err)) {
       isGeminiExhausted = true;
@@ -1439,7 +1703,23 @@ app.get("/api/legislation/alerts", async (req, res) => {
       return res.json({ source: "cache", data: FALLBACK_ALERTS });
     }
 
-    const prompt = `Formulate a list of 3 active scheduled upcoming critical legislative floor votes in the US Congress for the rest of June and July 2026. For each scheduled vote, include details about the billId, billTitle, physical bills url link on congress.gov or mock url, scheduledTime, general importance, simple plain language bill summary, and predicted votes with confidence levels for at least 3 of Elizabeth Warren, Mike Johnson, Bernie Sanders or Alexandria Ocasio-Cortez.`;
+    const audienceMode = normalizeAudienceMode(req.query.mode);
+    const zipCode = req.query.zip ? String(req.query.zip) : "";
+    const stateCode = req.query.state ? String(req.query.state) : "";
+    const prompt = `Formulate a list of 3 active scheduled upcoming critical legislative floor votes in the US Congress for the rest of June and July 2026.
+For each vote, provide:
+1) Executive summary
+2) Plain-language breakdown
+3) Technical/provisions deep dive
+4) Pros/cons/stakeholder impacts with evidence
+5) Financial/budget implications
+6) Historical/political context
+7) Sources + confidence score (0-100) + uncertainty
+8) Suggested follow-up questions
+
+Also provide supporter view, opponent view, and neutral analysis for controversial bills.
+Include predicted votes with confidence levels for at least 3 of Elizabeth Warren, Mike Johnson, Bernie Sanders, Alexandria Ocasio-Cortez.
+${zipCode || stateCode ? `Include a local-impact note for residents in ${[zipCode, stateCode].filter(Boolean).join(", ")}.` : ""}`;
 
     const AlertsSchema = {
       type: Type.ARRAY,
@@ -1453,6 +1733,30 @@ app.get("/api/legislation/alerts", async (req, res) => {
           scheduledTime: { type: Type.STRING },
           importance: { type: Type.STRING },
           plainSummary: { type: Type.STRING },
+          executiveSummary: { type: Type.STRING },
+          technicalDeepDive: { type: Type.STRING },
+          financialBudgetImplications: { type: Type.STRING },
+          historicalPoliticalContext: { type: Type.STRING },
+          supporterView: { type: Type.STRING },
+          opponentView: { type: Type.STRING },
+          neutralAnalysis: { type: Type.STRING },
+          confidenceScore: { type: Type.NUMBER },
+          uncertaintyNotes: { type: Type.STRING },
+          sources: { type: Type.ARRAY, items: { type: Type.STRING } },
+          followUpQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+          prosConsStakeholderImpacts: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                stakeholder: { type: Type.STRING },
+                impact: { type: Type.STRING },
+                pros: { type: Type.ARRAY, items: { type: Type.STRING } },
+                cons: { type: Type.ARRAY, items: { type: Type.STRING } },
+                evidence: { type: Type.STRING }
+              }
+            }
+          },
           predictedVotes: {
             type: Type.ARRAY,
             items: {
@@ -1472,8 +1776,28 @@ app.get("/api/legislation/alerts", async (req, res) => {
       }
     };
 
-    const data = await runGroundedQuery(prompt, AlertsSchema);
-    res.json({ source: "live", data });
+    const data = await runGroundedQuery(prompt, AlertsSchema, 25000, { audienceMode });
+    const normalizedData = Array.isArray(data) ? data.map((item: any) => {
+      const normalized = normalizeStructuredAnalysis(item, item?.billId || item?.billTitle || "upcoming vote");
+      const predictedVotes = Array.isArray(item?.predictedVotes)
+        ? item.predictedVotes.map((vote: any) => ({
+            ...vote,
+            confidence: clampConfidence(vote?.confidence, 65)
+          }))
+        : [];
+      return {
+        ...item,
+        predictedVotes,
+        confidenceScore: normalized.confidenceScore,
+        uncertaintyNotes: normalized.uncertaintyNotes,
+        sources: normalized.sources,
+        followUpQuestions: normalized.followUpQuestions,
+        supporterView: item?.supporterView || normalized.supporterView,
+        opponentView: item?.opponentView || normalized.opponentView,
+        neutralAnalysis: item?.neutralAnalysis || normalized.neutralAnalysis
+      };
+    }) : data;
+    res.json({ source: "live", data: normalizedData });
   } catch (err: any) {
     if (isExhaustionError(err)) {
       isGeminiExhausted = true;
@@ -1620,14 +1944,97 @@ Which of these topics or bills would you like to explore?`;
 
 // 6. CHAT ASSISTANT ENDPOINT
 app.post("/api/legislation/chat", async (req, res) => {
-  const { message, history, billContext } = req.body;
+  const { message, history, billContext, audienceMode: rawAudienceMode, explainMode, zipCode, stateCode, compareBillId } = req.body;
   if (!message) {
     return res.status(400).json({ error: "No user message sent" });
   }
 
+  const audienceMode = normalizeAudienceMode(rawAudienceMode || explainMode);
+  const topicText = String(message);
+  const controversial = isLikelyControversial(`${topicText} ${billContext?.id || ""} ${billContext?.title || ""}`);
+  const localHint = [zipCode, stateCode].filter(Boolean).join(", ");
+  const needsComparison = /compare|similar|versus|vs\./i.test(topicText) || !!compareBillId;
+  const historySlice = Array.isArray(history) ? history.slice(-8) : [];
+  const historyStr = historySlice
+    .map((entry: any) => `${String(entry?.role || "user")}: ${String(entry?.content || "")}`)
+    .join("\n");
+
   const contextStr = billContext 
     ? `The user is currently viewing the details of political bill: ${JSON.stringify(billContext)}.` 
     : `The user is browsing general legislative status.`;
+
+  const chatSchema = {
+    type: Type.OBJECT,
+    properties: {
+      executiveSummary: { type: Type.STRING },
+      plainLanguageBreakdown: { type: Type.STRING },
+      technicalDeepDive: { type: Type.STRING },
+      prosConsStakeholderImpacts: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            stakeholder: { type: Type.STRING },
+            impact: { type: Type.STRING },
+            pros: { type: Type.ARRAY, items: { type: Type.STRING } },
+            cons: { type: Type.ARRAY, items: { type: Type.STRING } },
+            evidence: { type: Type.STRING }
+          }
+        }
+      },
+      financialBudgetImplications: { type: Type.STRING },
+      historicalPoliticalContext: { type: Type.STRING },
+      supporterView: { type: Type.STRING },
+      opponentView: { type: Type.STRING },
+      neutralAnalysis: { type: Type.STRING },
+      sources: { type: Type.ARRAY, items: { type: Type.STRING } },
+      confidenceScore: { type: Type.NUMBER },
+      uncertaintyNotes: { type: Type.STRING },
+      followUpQuestions: { type: Type.ARRAY, items: { type: Type.STRING } }
+    },
+    required: [
+      "executiveSummary",
+      "plainLanguageBreakdown",
+      "technicalDeepDive",
+      "financialBudgetImplications",
+      "historicalPoliticalContext",
+      "sources",
+      "confidenceScore",
+      "uncertaintyNotes",
+      "followUpQuestions"
+    ]
+  };
+
+  const userPrompt = `Analyze this user query and return JSON matching the schema:
+${topicText}
+
+Current context:
+${contextStr}
+${historyStr ? `\nConversation history (recent):\n${historyStr}` : ""}
+${needsComparison ? `\nComparison requested. Compare against ${compareBillId || "a similar historical bill"} in technical and historical sections.` : ""}
+${localHint ? `\nLocal impact requested for: ${localHint}.` : ""}
+
+Mandatory output layers:
+1) Executive summary (2-3 sentences)
+2) Plain-language breakdown ("for dummies")
+3) Technical/provisions deep dive
+4) Pros, cons, and stakeholder impacts with evidence
+5) Financial/budget implications
+6) Historical/political context
+7) Sources + confidence score (0-100) + uncertainty
+8) Suggested follow-up questions
+
+Multi-perspective requirement:
+If topic is controversial, include supporter view, opponent view, and neutral analysis.
+
+Few-shot style examples:
+Example question: "How does H.R. 3935 affect passengers with wheelchairs?"
+Example executiveSummary: "H.R. 3935 updates FAA authorities and includes disability-access provisions. It requires clearer wheelchair handling processes and more accountability for equipment damage."
+Example followUpQuestion: "Do you want a breakdown of passenger-rights provisions by section?"
+
+Example question: "Compare S. 2058 to prior farm bill extensions."
+Example technicalDeepDive: "S. 2058 continues commodity, crop insurance, and SNAP authorities with time-bounded extensions; prior extensions varied in subsidy mix and disaster triggers."
+Example source: "https://www.congress.gov/"`;
 
   // Try Gemini First
   try {
@@ -1636,25 +2043,25 @@ app.post("/api/legislation/chat", async (req, res) => {
       console.log("[Chat] Dispatching query to Gemini Assistant...");
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
-        contents: `
-          You are 'CapitolExpert AI', an extremely objective, polite, and fully unbiased senior Congressional policy and debate researcher. Use your web search capabilities if needed to support factual claims about actual bills, representatives, or voting counts.
-          
-          ${contextStr}
-          
-          Rules:
-          - NEVER sound partisan. Always present arguments from both major US political parties fairly.
-          - Answer directly in plain English. Limit dry jargon.
-          - Encourage citizen engagement by explaining procedures.
-          
-          User inquiry: ${message}
-        `,
+        contents: userPrompt,
         config: {
           tools: [{ googleSearch: {} }],
+          responseMimeType: "application/json",
+          responseSchema: chatSchema,
+          systemInstruction: `You are "CapitolExpert AI", a neutral congressional policy analyst.
+Use internal step-by-step reasoning but never reveal chain-of-thought.
+${getAudienceInstruction(audienceMode)}
+Enforce anti-bias constraints: no partisan cheerleading, no loaded rhetoric, and no unsupported moral claims.
+Ground factual claims using source URLs or canonical bill identifiers.
+${controversial ? "Treat this as potentially controversial and include balanced supporter/opponent/neutral framing." : ""}`
         }
       });
 
       if (response.text) {
-        return res.json({ response: response.text, source: "live" });
+        const parsed = JSON.parse(response.text.trim());
+        const normalized = normalizeStructuredAnalysis(parsed, billContext?.id || topicText);
+        const formatted = formatChatStructuredAnalysis(normalized);
+        return res.json({ response: formatted, source: "live", metadata: normalized });
       }
     }
   } catch (err: any) {
@@ -1674,26 +2081,27 @@ app.post("/api/legislation/chat", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `You are 'CapitolExpert AI', an extremely objective, polite, and fully unbiased senior Congressional policy and debate researcher.
-            
-            ${contextStr}
-            
-            Rules:
-            - NEVER sound partisan. Always present arguments from both major US political parties fairly.
-            - Answer directly in plain English. Limit dry jargon.
-            - Encourage citizen engagement by explaining procedures.
-            - Provide clear, high-quality, balanced and detailed analysis of legislative topics.`
+            content: `You are "CapitolExpert AI", an extremely objective congressional policy researcher.
+Use internal step-by-step reasoning but do not expose chain-of-thought.
+${getAudienceInstruction(audienceMode)}
+Apply strict anti-bias behavior and provide balanced multi-perspective analysis when the topic is controversial.
+Always include sources (URLs or bill IDs), confidence score (0-100), and uncertainty notes.
+Return JSON only.`
           },
           {
             role: "user",
-            content: message
+            content: userPrompt
           }
-        ]
+        ],
+        response_format: { type: "json_object" }
       });
 
       const reply = response.choices[0]?.message?.content;
       if (reply) {
-        return res.json({ response: reply, source: "live_openai" });
+        const parsed = JSON.parse(reply.trim());
+        const normalized = normalizeStructuredAnalysis(parsed, billContext?.id || topicText);
+        const formatted = formatChatStructuredAnalysis(normalized);
+        return res.json({ response: formatted, source: "live_openai", metadata: normalized });
       }
     }
   } catch (err: any) {
@@ -1707,6 +2115,108 @@ app.post("/api/legislation/chat", async (req, res) => {
   console.log("Chat assistant status: using offline simulated response due to API status or key limit.");
   const reply = generateOfflineChatReply(message, billContext);
   res.json({ response: reply, source: "offline_fallback" });
+});
+
+// 6a. DEEP STRUCTURED ANALYSIS ENDPOINT
+app.post("/api/legislation/analyze-deep", async (req, res) => {
+  const { billId, billTitle, billText, compareBillId, audienceMode: rawAudienceMode, zipCode, stateCode } = req.body || {};
+  if (!billId && !billTitle && !billText) {
+    return res.status(400).json({ error: "Provide billId, billTitle, or billText" });
+  }
+
+  if (!hasAIProvider()) {
+    return res.status(503).json({ error: "No AI provider configured for deep analysis." });
+  }
+
+  const audienceMode = normalizeAudienceMode(rawAudienceMode);
+  const subject = String(billId || billTitle || "custom legislative text");
+  const controversial = isLikelyControversial(`${subject} ${billText || ""}`);
+  const localHint = [zipCode, stateCode].filter(Boolean).join(", ");
+  const prompt = `Create an in-depth analysis for: ${subject}.
+${billText ? `Use this full bill text:\n${billText}` : ""}
+${compareBillId ? `Compare against: ${compareBillId}` : ""}
+${localHint ? `Include implications for residents in ${localHint}.` : ""}
+
+Output sections:
+1. Executive summary (2-3 sentences)
+2. Plain-language breakdown ("for dummies")
+3. Technical/provisions deep dive
+4. Pros, cons, and stakeholder impacts (with evidence)
+5. Financial/budget implications
+6. Historical/political context
+7. Sources + confidence score (0-100) + uncertainty notes
+8. Suggested follow-up questions
+9. Key votes to watch / likely whip points
+10. Supporter view, opponent view, and neutral analysis`;
+
+  const DeepAnalysisSchema = {
+    type: Type.OBJECT,
+    properties: {
+      executiveSummary: { type: Type.STRING },
+      plainLanguageBreakdown: { type: Type.STRING },
+      technicalDeepDive: { type: Type.STRING },
+      prosConsStakeholderImpacts: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            stakeholder: { type: Type.STRING },
+            impact: { type: Type.STRING },
+            pros: { type: Type.ARRAY, items: { type: Type.STRING } },
+            cons: { type: Type.ARRAY, items: { type: Type.STRING } },
+            evidence: { type: Type.STRING }
+          }
+        }
+      },
+      financialBudgetImplications: { type: Type.STRING },
+      historicalPoliticalContext: { type: Type.STRING },
+      sources: { type: Type.ARRAY, items: { type: Type.STRING } },
+      confidenceScore: { type: Type.NUMBER },
+      uncertaintyNotes: { type: Type.STRING },
+      followUpQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+      keyVotesToWatch: { type: Type.ARRAY, items: { type: Type.STRING } },
+      supporterView: { type: Type.STRING },
+      opponentView: { type: Type.STRING },
+      neutralAnalysis: { type: Type.STRING }
+    },
+    required: [
+      "executiveSummary",
+      "plainLanguageBreakdown",
+      "technicalDeepDive",
+      "financialBudgetImplications",
+      "historicalPoliticalContext",
+      "sources",
+      "confidenceScore",
+      "uncertaintyNotes",
+      "followUpQuestions"
+    ]
+  };
+
+  try {
+    const data = await runGroundedQuery(prompt, DeepAnalysisSchema, 40000, {
+      audienceMode,
+      billText: billText ? String(billText) : undefined,
+      controversial
+    });
+    const normalized = normalizeStructuredAnalysis(data, subject);
+    const merged = {
+      ...data,
+      confidenceScore: normalized.confidenceScore,
+      uncertaintyNotes: normalized.uncertaintyNotes,
+      sources: normalized.sources,
+      followUpQuestions: normalized.followUpQuestions,
+      supporterView: data?.supporterView || normalized.supporterView,
+      opponentView: data?.opponentView || normalized.opponentView,
+      neutralAnalysis: data?.neutralAnalysis || normalized.neutralAnalysis
+    };
+    res.json({ source: "live", data: merged });
+  } catch (err: any) {
+    if (isExhaustionError(err)) {
+      isGeminiExhausted = true;
+      isOpenAIExhausted = true;
+    }
+    res.status(500).json({ error: "Deep analysis failed", details: err.message || String(err) });
+  }
 });
 
 // ==========================================

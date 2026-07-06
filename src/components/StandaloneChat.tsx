@@ -3,6 +3,7 @@ import { HelpCircle, Send, Landmark, HelpCircle as AskIcon, Sparkles, RefreshCw,
 import { ChatMessage } from "../types";
 
 export default function StandaloneChat() {
+  const [audienceMode, setAudienceMode] = useState<"standard" | "eli5" | "eli15" | "policy_wonk">("standard");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "initial",
@@ -37,7 +38,11 @@ export default function StandaloneChat() {
       const resp = await fetch("/api/legislation/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msgText })
+        body: JSON.stringify({
+          message: msgText,
+          audienceMode,
+          history: messages.map((m) => ({ role: m.role, content: m.content }))
+        })
       });
 
       if (!resp.ok) {
@@ -74,6 +79,12 @@ export default function StandaloneChat() {
     "Explain the debate concerning state-level corporate rental housing pricing software regulations.",
     "Detail how the FAA re-authorization impacts passenger rights regarding wheelchair support."
   ];
+  const refinementPrompts = [
+    "Explain in more detail.",
+    "What about Section 3 specifically?",
+    "Compare this to a similar past bill.",
+    "How would this affect someone in my zip code?"
+  ];
 
   return (
     <div className="space-y-6">
@@ -84,6 +95,27 @@ export default function StandaloneChat() {
           CapitolExpert AI Policy Desk
         </h2>
         <p className="text-xs text-slate-400">Neutral, grounded analysis of the 119th United States Congress regulations</p>
+        <div className="flex flex-wrap gap-2 mt-3">
+          {[
+            { id: "standard", label: "Standard" },
+            { id: "eli5", label: "Explain like I'm 5" },
+            { id: "eli15", label: "Explain like I'm 15" },
+            { id: "policy_wonk", label: "Policy Wonk" }
+          ].map((mode) => (
+            <button
+              key={mode.id}
+              onClick={() => setAudienceMode(mode.id as typeof audienceMode)}
+              disabled={loading}
+              className={`px-2.5 py-1.5 text-[10px] rounded-full border transition ${
+                audienceMode === mode.id
+                  ? "bg-blue-600 text-white border-blue-500"
+                  : "bg-slate-900/60 text-slate-300 border-slate-700 hover:border-blue-500/50"
+              }`}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Main double column: Chat box & Quick help reference */}
@@ -168,6 +200,21 @@ export default function StandaloneChat() {
                   {prompt}
                 </button>
               ))}
+            </div>
+            <div className="pt-3 border-t border-slate-800">
+              <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-mono mb-2">Refine Analysis</h4>
+              <div className="space-y-2">
+                {refinementPrompts.map((prompt, idx) => (
+                  <button
+                    key={`refine-${idx}`}
+                    onClick={() => handleSend(prompt)}
+                    disabled={loading}
+                    className="w-full text-left p-2.5 rounded-lg bg-slate-900/70 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/30 text-[11px] text-slate-300 hover:text-white transition-all duration-200 cursor-pointer"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
