@@ -18,3 +18,17 @@ View your app in AI Studio: https://ai.studio/apps/7521de1b-e821-4f8d-bd5b-399a4
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## AI Analysis Upgrades
+
+- `POST /api/legislation/chat` now supports:
+  - `audienceMode`: `"standard" | "eli5" | "eli15" | "policy_wonk"`
+  - `history`: recent chat turns (role/content objects) for interactive refinement
+  - `zipCode` / `stateCode` for localized impact context
+  - `compareBillId` for bill-to-bill comparison prompts
+- `GET /api/legislation/summarize` and `GET /api/legislation/alerts` now return enriched analysis metadata, including:
+  - `sources`, `confidenceScore`, `uncertaintyNotes`, `followUpQuestions`
+  - multi-perspective fields: `supporterView`, `opponentView`, `neutralAnalysis`
+- New endpoint: `POST /api/legislation/analyze-deep`
+  - accepts `billId` or `billTitle` or `billText`, plus optional `compareBillId`, `audienceMode`, `zipCode`, `stateCode`
+  - returns a deep multi-layer policy analysis payload with source validation fields

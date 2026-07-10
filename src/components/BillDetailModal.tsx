@@ -17,6 +17,7 @@ export default function BillDetailModal({ billId, onClose }: BillDetailModalProp
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [aiResponding, setAiResponding] = useState(false);
+  const [audienceMode, setAudienceMode] = useState<"standard" | "eli5" | "eli15" | "policy_wonk">("standard");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +90,9 @@ How can I help you understand this bill today?`,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMsg.content,
-          billContext: summary
+          billContext: summary,
+          audienceMode,
+          history: messages.map((m) => ({ role: m.role, content: m.content }))
         })
       });
 
@@ -301,6 +304,27 @@ How can I help you understand this bill today?`,
 
               {activeTab === "chat" && (
                 <div className="flex flex-col h-[520px] bg-slate-950 rounded-xl border border-slate-800 p-4">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {[
+                      { id: "standard", label: "Standard" },
+                      { id: "eli5", label: "I'm 5" },
+                      { id: "eli15", label: "I'm 15" },
+                      { id: "policy_wonk", label: "Policy Wonk" }
+                    ].map((mode) => (
+                      <button
+                        key={mode.id}
+                        onClick={() => setAudienceMode(mode.id as typeof audienceMode)}
+                        disabled={aiResponding}
+                        className={`px-2.5 py-1 text-[10px] rounded-full border transition ${
+                          audienceMode === mode.id
+                            ? "bg-amber-500 text-slate-950 border-amber-500"
+                            : "bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-500/60"
+                        }`}
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
+                  </div>
                   {/* Messages container */}
                   <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
                     {messages.map((msg) => (
@@ -329,6 +353,23 @@ How can I help you understand this bill today?`,
                       </div>
                     )}
                     <div ref={messagesEndRef} />
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {[
+                      "Explain in more detail.",
+                      "What about a specific section?",
+                      "Compare this bill to a similar past bill.",
+                      "How would this affect my state or zip code?"
+                    ].map((suggestion, idx) => (
+                      <button
+                        key={`bill-refine-${idx}`}
+                        onClick={() => setInputValue(suggestion)}
+                        disabled={aiResponding}
+                        className="text-[10px] px-2.5 py-1 rounded-full border border-slate-700 text-slate-300 hover:border-amber-500/60 hover:text-amber-300 transition"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
                   </div>
 
                   {/* Input form */}
