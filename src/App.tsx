@@ -10,6 +10,8 @@ import LegislatorScorecards from "./components/LegislatorScorecards";
 import UpcomingVoteAlerts from "./components/UpcomingVoteAlerts";
 import CitizensConsensus from "./components/CitizensConsensus";
 import CivicAlignmentMap from "./components/CivicAlignmentMap";
+import VoterInformation from "./components/VoterInformation";
+import ApiDiagnosticsModal from "./components/ApiDiagnosticsModal";
 import { Accomplishment, LegislativeSession, RollCallVote } from "./types";
 import { Landmark, Calendar, Settings, ArrowUpRight, ShieldCheck } from "lucide-react";
 
@@ -26,6 +28,7 @@ export default function App() {
   
   // Status check for live grounded intelligence (GEMINI_API_KEY check)
   const [isLive, setIsLive] = useState<boolean>(true);
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
 
   // Refresh status triggers
   const [loadingAccomplishments, setLoadingAccomplishments] = useState(false);
@@ -175,6 +178,8 @@ export default function App() {
         );
       case "chat":
         return <StandaloneChat />;
+      case "voter-info":
+        return <VoterInformation />;
       default:
         return (
           <div className="text-center py-20 text-slate-400">
@@ -187,7 +192,12 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 overflow-x-hidden antialiased select-text">
       {/* 1. Header Navigation Component */}
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} isLive={isLive} />
+      <Navigation 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        isLive={isLive} 
+        onOpenDiagnostics={() => setShowDiagnostics(true)} 
+      />
 
       {/* 2. Primary Layout Framework (Professional Polish Theme alignment) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20">
@@ -204,10 +214,18 @@ export default function App() {
                 </p>
               </div>
             </div>
-            <div className="text-right flex-shrink-0">
-              <span className="text-[10px] font-mono bg-amber-500/20 text-amber-800 font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">
-                Simulation Active
-              </span>
+            <div className="flex items-center space-x-3 flex-shrink-0">
+              <button
+                onClick={() => setShowDiagnostics(true)}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
+              >
+                Verify API Keys
+              </button>
+              <div className="text-right hidden sm:block">
+                <span className="text-[10px] font-mono bg-amber-500/20 text-amber-800 font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">
+                  Simulation Active
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -246,6 +264,13 @@ export default function App() {
         <BillDetailModal
           billId={selectedBillId}
           onClose={() => setSelectedBillId(null)}
+        />
+      )}
+
+      {/* 5. API Key Verification & System Diagnostics Dialog */}
+      {showDiagnostics && (
+        <ApiDiagnosticsModal
+          onClose={() => setShowDiagnostics(false)}
         />
       )}
     </div>

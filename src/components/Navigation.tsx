@@ -1,13 +1,14 @@
 import React from "react";
-import { Landmark, Sparkles, FileText, CalendarDays, BarChart3, HelpCircle, Activity, Award, Bell, Vote, Map } from "lucide-react";
+import { Landmark, Sparkles, FileText, CalendarDays, BarChart3, HelpCircle, Activity, Award, Bell, Vote, Map, MapPin } from "lucide-react";
 
 interface NavigationProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isLive: boolean;
+  onOpenDiagnostics: () => void;
 }
 
-export default function Navigation({ activeTab, setActiveTab, isLive }: NavigationProps) {
+export default function Navigation({ activeTab, setActiveTab, isLive, onOpenDiagnostics }: NavigationProps) {
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: Landmark },
     { id: "bills", label: "Plain-Language Directory", icon: FileText },
@@ -17,6 +18,7 @@ export default function Navigation({ activeTab, setActiveTab, isLive }: Navigati
     { id: "alerts", label: "Vote Predictor Alerts", icon: Bell },
     { id: "sessions", label: "Upcoming Calendar", icon: CalendarDays },
     { id: "votes", label: "Roll Call Votes", icon: BarChart3 },
+    { id: "voter-info", label: "Voter Info", icon: MapPin },
     { id: "chat", label: "CapitolExpert AI", icon: HelpCircle },
   ];
 
@@ -59,12 +61,16 @@ export default function Navigation({ activeTab, setActiveTab, isLive }: Navigati
           </nav>
 
           {/* Live System Indicator */}
-          <div className="flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700/60 shadow-inner">
+          <button
+            onClick={onOpenDiagnostics}
+            title="Click to verify API keys and system diagnostics"
+            className="flex items-center space-x-2 bg-slate-800/80 hover:bg-slate-800 hover:text-white px-3 py-1.5 rounded-full border border-slate-700/60 shadow-inner cursor-pointer transition-colors group"
+          >
             <span className="relative flex h-2.5 w-2.5">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isLive ? "bg-emerald-400" : "bg-amber-400"}`}></span>
               <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isLive ? "bg-emerald-500" : "bg-amber-500"}`}></span>
             </span>
-            <span className="text-[10px] font-mono font-medium text-slate-300 uppercase tracking-wide flex items-center gap-1">
+            <span className="text-[10px] font-mono font-medium text-slate-300 uppercase tracking-wide flex items-center gap-1 group-hover:text-amber-400 transition-colors">
               {isLive ? (
                 <>
                   <Sparkles className="h-2.5 w-2.5 text-emerald-400 inline" /> Grounded AI Live
@@ -75,7 +81,7 @@ export default function Navigation({ activeTab, setActiveTab, isLive }: Navigati
                 </>
               )}
             </span>
-          </div>
+          </button>
         </div>
 
         {/* Mobile Navigation Bar */}
