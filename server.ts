@@ -9,6 +9,7 @@ dotenv.config();
 
 const app = express();
 const PORT = 3000;
+const IS_VERCEL = process.env.VERCEL === "1";
 
 app.use(express.json());
 
@@ -2492,4 +2493,8 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!IS_VERCEL) {
+  startServer();
+}
+
+export default app;
