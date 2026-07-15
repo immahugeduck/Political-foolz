@@ -146,7 +146,7 @@ export default function LegislatorScorecards({ followedLegislators = [], toggleF
         {showApiGuide && (
           <div className="px-6 pb-6 pt-2 border-t border-slate-200/60 text-xs text-slate-650 space-y-4 leading-relaxed bg-white">
             <p>
-              By default, this app utilizes a high-performance **Google Gemini Search-Grounded Model** to browse official dockets, alongside a local fallback dataset. If you prefer to integrate hardcoded first-party datasets or configure dynamic state-wide congress API keys, we strongly suggest connecting to these premier services:
+              By default, this app utilizes a high-performance <strong>Google Gemini Search-Grounded Model</strong> to browse official dockets, alongside a local fallback dataset. If you prefer to integrate hardcoded first-party datasets or configure dynamic state-wide congress API keys, we strongly suggest connecting to these premier services:
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -195,7 +195,7 @@ export default function LegislatorScorecards({ followedLegislators = [], toggleF
                 <Key className="h-4 w-4" /> CODE INTEGRATION SUGGESTION (`server.ts`)
               </span>
               <p className="text-slate-350">
-                You can easily add your secret API key inside `.env.example` as `PROPUBLICA_API_KEY=`, and fetch states dynamically in `server.ts` with this simple pattern:
+                You can add your secret API key in a local untracked env file (for example `.env`) as `PROPUBLICA_API_KEY=`, and fetch states dynamically in `server.ts` with this simple pattern:
               </p>
               <pre className="bg-slate-950 p-3 rounded-lg overflow-x-auto text-slate-300">
 {`app.get("/api/legislation/legislators", async (req, res) => {
