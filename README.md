@@ -15,7 +15,7 @@ View your app in AI Studio: https://ai.studio/apps/7521de1b-e821-4f8d-bd5b-399a4
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+2. Create a local `.env` file (do not commit it) and set `GEMINI_API_KEY` to your Gemini API key
 3. Run the app:
    `npm run dev`
 
