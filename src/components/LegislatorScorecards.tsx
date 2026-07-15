@@ -1,57 +1,3 @@
-import React from 'react';
-import { computeConstituentNationalAlignment } from '../utils/scoring-engine';
-
-const ConstituentNationalAlignment = ({ legislator }: { legislator: any }) => {
-  const score = computeConstituentNationalAlignment(legislator.votingHistory || []);
-  
-  return (
-    <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 mb-8">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h2 className="text-3xl font-bold">Constituent & National Alignment Index</h2>
-          <p className="text-sm text-gray-500">Based on real voting record • Transparent methodology</p>
-        </div>
-        <div className="text-right">
-          <div className="text-6xl font-bold text-emerald-600">{score.overallScore}</div>
-          <div className="text-3xl font-semibold">{score.grade}</div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-        {Object.entries(score.subScores).map(([label, value]) => (
-          <div key={label} className="bg-gray-50 rounded-xl p-4">
-            <div className="uppercase text-xs tracking-widest text-gray-500 mb-1">
-              {label.replace(/([A-Z])/g, ' $1').trim()}
-            </div>
-            <div className="text-4xl font-bold">{value}</div>
-          </div>
-        ))}
-      </div>
-
-      <div>
-        <h3 className="font-semibold mb-4 flex items-center gap-2">Key Highlighted Decisions</h3>
-        {score.highlightedDecisions.map((d: any, i: number) => (
-          <div key={i} className="flex gap-4 py-4 border-b last:border-none">
-            <span className={`font-mono text-2xl flex-shrink-0 ${d.vote.includes('+') ? 'text-green-600' : 'text-red-600'}`}>
-              {d.vote}
-            </span>
-            <div>
-              <div className="font-medium">{d.bill}</div>
-              <div className="text-sm text-gray-600">{d.explanation}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Paste your full original LegislatorScorecards component code here
-// Then insert <ConstituentNationalAlignment legislator={selectedLegislator} /> in the profile view (e.g. after Liberty Index)
-
-export default function LegislatorScorecards(/* your props */) {
-  // ... your existing code ...
-}
 import React, { useState, useEffect } from "react";
 import { 
   User, 
@@ -1193,5 +1139,4 @@ export default function LegislatorScorecards({ followedLegislators = [], toggleF
       )}
     </div>
   );
-}
 }
