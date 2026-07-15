@@ -24,6 +24,63 @@ import {
   TrendingUp
 } from "lucide-react";
 import { LegislatorScorecard } from "../types";
+// FULL UPDATED COMPONENT (copy entire content)
+import React from 'react';
+import { computeConstituentNationalAlignment } from '../utils/scoring-engine'; // adjust path
+
+// Your original imports + component code here...
+
+// NEW SECTION - Add this component
+const ConstituentNationalAlignment = ({ legislator }: { legislator: any }) => {
+  const scoreData = computeConstituentNationalAlignment(legislator.votingHistory || []);
+  
+  return (
+    <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 mb-8">
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Constituent & National Alignment</h2>
+          <p className="text-sm text-gray-500 mt-1">Transparent voting record score • Updated daily</p>
+        </div>
+        <div className="text-right">
+          <div className="text-7xl font-bold text-emerald-600">{scoreData.overallScore}</div>
+          <div className="text-2xl font-semibold text-emerald-600">{scoreData.grade}</div>
+        </div>
+      </div>
+
+      {/* Sub-scores */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        {Object.entries(scoreData.subScores).map(([key, value]) => (
+          <div key={key} className="bg-gray-50 p-4 rounded-xl">
+            <div className="text-xs uppercase tracking-widest text-gray-500">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
+            <div className="text-4xl font-bold mt-2">{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Highlighted Decisions */}
+      <div>
+        <h3 className="font-semibold mb-4">Key Decisions</h3>
+        {scoreData.highlightedDecisions.map((d, i) => (
+          <div key={i} className="flex gap-4 py-3 border-b last:border-0">
+            <span className={`font-mono text-lg ${d.vote === '+1' ? 'text-green-600' : d.vote === '-1' ? 'text-red-600' : 'text-amber-600'}`}>
+              {d.vote}
+            </span>
+            <div>
+              <div className="font-medium">{d.bill}</div>
+              <div className="text-sm text-gray-600">{d.explanation}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// In your main profile render, insert: <ConstituentNationalAlignment legislator={selected} />
+export default function LegislatorScorecards(/* your props */) {
+  // Your full original component logic...
+  // Just add the new section where it fits best (e.g. top of profile)
+}
 
 interface LegislatorScorecardsProps {
   followedLegislators: string[];
@@ -1139,4 +1196,5 @@ export default function LegislatorScorecards({ followedLegislators = [], toggleF
       )}
     </div>
   );
+}
 }
