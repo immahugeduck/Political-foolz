@@ -1,17 +1,127 @@
 import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import path from "path";
 import dotenv from "dotenv";
+import pino from "pino";
+import pinoHttp from "pino-http";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { OpenAI } from "openai";
+import { z } from "zod";
 
 dotenv.config();
 
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "production", "test"]).optional().default("development"),
+  VERCEL: z.string().optional(),
+  APP_URL: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  CONGRESS_API_KEY: z.string().optional(),
+  GOOGLE_CIVIC_API_KEY: z.string().optional(),
+});
+
+const envResult = envSchema.safeParse(process.env);
+if (!envResult.success) {
+  console.error("Invalid environment configuration:", envResult.error.flatten().fieldErrors);
+  throw new Error("Server startup failed due to invalid environment configuration.");
+}
+
+const ENV = envResult.data;
+
+if (ENV.NODE_ENV === "production" && !ENV.APP_URL) {
+  throw new Error("APP_URL is required in production.");
+}
+
 const app = express();
 const PORT = 3000;
-const IS_VERCEL = process.env.VERCEL === "1";
+const IS_VERCEL = ENV.VERCEL === "1";
 
-app.use(express.json());
+app.set("trust proxy", 1);
+
+const logger = pino({
+  level: ENV.NODE_ENV === "production" ? "info" : "debug",
+  redact: {
+    paths: [
+      "req.headers.authorization",
+      "req.headers.cookie",
+      "req.headers.x-api-key",
+      "req.headers.x-openai-key",
+      "req.headers.x-goog-api-key",
+    ],
+    remove: true,
+  },
+});
+
+app.use(
+  pinoHttp({
+    logger,
+  })
+);
+
+const configuredAppUrl = ENV.APP_URL
+  ? ENV.APP_URL.startsWith("http")
+    ? ENV.APP_URL
+    : `https://${ENV.APP_URL}`
+  : "";
+
+const localOrigins = ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"];
+const allowedOrigins = new Set<string>([
+  ...localOrigins,
+  ...(configuredAppUrl ? [new URL(configuredAppUrl).origin] : []),
+  "https://political-foolz.vercel.app",
+]);
+
+app.use(helmet());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS origin not allowed."));
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: false,
+  })
+);
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: "Too many requests. Please try again shortly." },
+  })
+);
+
+app.use(express.json({ limit: "1mb" }));
+
+app.get("/api/health", (_req, res) => {
+  res.json({
+    ok: true,
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.round(process.uptime()),
+  });
+});
+
+app.get("/api/ready", (_req, res) => {
+  const checks = {
+    appUrlConfigured: !!ENV.APP_URL,
+    hasGeminiApiKey: !!ENV.GEMINI_API_KEY && ENV.GEMINI_API_KEY !== "MY_GEMINI_API_KEY",
+    hasOpenAIApiKey: !!ENV.OPENAI_API_KEY && ENV.OPENAI_API_KEY !== "MY_OPENAI_API_KEY",
+  };
+  const ready = checks.appUrlConfigured && (checks.hasGeminiApiKey || checks.hasOpenAIApiKey);
+
+  res.status(ready ? 200 : 503).json({
+    ok: ready,
+    checks,
+  });
+});
 
 // Initialize Lazy Gemini Client with explicit User-Agent
 let aiClient: GoogleGenAI | null = null;
@@ -2494,7 +2604,10 @@ async function startServer() {
 }
 
 if (!IS_VERCEL) {
-  startServer();
+  startServer().catch((err) => {
+    logger.error({ err }, "Server failed to start");
+    process.exit(1);
+  });
 }
 
 export default app;
