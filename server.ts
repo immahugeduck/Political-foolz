@@ -39,7 +39,9 @@ const app = express();
 const PORT = 3000;
 const IS_VERCEL = ENV.VERCEL === "1";
 
-app.set("trust proxy", 1);
+if (IS_VERCEL) {
+  app.set("trust proxy", 1);
+}
 
 const logger = pino({
   level: ENV.NODE_ENV === "production" ? "info" : "debug",
@@ -67,10 +69,21 @@ const configuredAppUrl = ENV.APP_URL
     : `https://${ENV.APP_URL}`
   : "";
 
+let parsedAppUrl: URL | null = null;
+if (configuredAppUrl) {
+  try {
+    parsedAppUrl = new URL(configuredAppUrl);
+  } catch {
+    throw new Error(
+      `APP_URL is invalid: "${ENV.APP_URL}". Provide a valid absolute URL (e.g. https://example.com).`
+    );
+  }
+}
+
 const localOrigins = ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"];
 const allowedOrigins = new Set<string>([
   ...localOrigins,
-  ...(configuredAppUrl ? [new URL(configuredAppUrl).origin] : []),
+  ...(parsedAppUrl ? [parsedAppUrl.origin] : []),
   "https://political-foolz.vercel.app",
 ]);
 
@@ -81,21 +94,11 @@ app.use(
       if (!origin || allowedOrigins.has(origin)) {
         return callback(null, true);
       }
-      return callback(new Error("CORS origin not allowed."));
+      return callback(null, false);
     },
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: false,
-  })
-);
-app.use(
-  "/api",
-  rateLimit({
-    windowMs: 60 * 1000,
-    max: 60,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { success: false, error: "Too many requests. Please try again shortly." },
   })
 );
 
@@ -109,11 +112,18 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+const PLACEHOLDER_PREFIXES = ["MY_", "YOUR_", "your_", "my_"];
+function isPlaceholderKey(value: string | undefined): boolean {
+  if (!value || !value.trim()) return true;
+  const v = value.trim();
+  return PLACEHOLDER_PREFIXES.some((prefix) => v.startsWith(prefix));
+}
+
 app.get("/api/ready", (_req, res) => {
   const checks = {
     appUrlConfigured: !!ENV.APP_URL,
-    hasGeminiApiKey: !!ENV.GEMINI_API_KEY && ENV.GEMINI_API_KEY !== "MY_GEMINI_API_KEY",
-    hasOpenAIApiKey: !!ENV.OPENAI_API_KEY && ENV.OPENAI_API_KEY !== "MY_OPENAI_API_KEY",
+    hasGeminiApiKey: !isPlaceholderKey(ENV.GEMINI_API_KEY),
+    hasOpenAIApiKey: !isPlaceholderKey(ENV.OPENAI_API_KEY),
   };
   const ready = checks.appUrlConfigured && (checks.hasGeminiApiKey || checks.hasOpenAIApiKey);
 
@@ -122,6 +132,17 @@ app.get("/api/ready", (_req, res) => {
     checks,
   });
 });
+
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: "Too many requests. Please try again shortly." },
+  })
+);
 
 // Initialize Lazy Gemini Client with explicit User-Agent
 let aiClient: GoogleGenAI | null = null;
