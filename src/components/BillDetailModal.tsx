@@ -123,7 +123,278 @@ How can I help you understand this bill today?`,
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-955/80 backdrop-blur-md flex items-center justify-end z-50 animate-fade-in" id="bill-modal-overlay">
+    <div className="fixed inset-0 bg-[--color-ink]/80 backdrop-blur-sm flex items-center justify-end z-50 animate-fade-in" id="bill-modal-overlay">
+      <div className="w-full max-w-3xl bg-[--color-paper] border-l-2 border-[--color-rule-dark] h-full flex flex-col shadow-2xl" id="bill-modal-container">
+        {/* Header */}
+        <div className="px-5 py-3 bg-[--color-masthead] border-b border-[--color-rule-dark]/30 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 text-xs font-mono font-bold bg-[--color-headline-gold]/20 text-[--color-headline-gold] border border-[--color-headline-gold]/30">
+              {billId}
+            </span>
+            <span className="text-[--color-ink-faint] font-mono text-[10px] uppercase tracking-wider">Legislative Analysis</span>
+          </div>
+          <button
+            onClick={onClose}
+            id="close-bill-modal"
+            className="p-1.5 text-[--color-ink-faint] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Tab Selector */}
+        <div className="flex bg-[--color-column-bg] border-b border-[--color-rule]">
+          <button
+            onClick={() => setActiveTab("summary")}
+            className={`py-3 px-5 font-sans text-xs font-bold uppercase tracking-wider border-b-2 flex items-center gap-2 transition-all cursor-pointer -mb-px ${
+              activeTab === "summary"
+                ? "border-[--color-ink] text-[--color-ink]"
+                : "border-transparent text-[--color-ink-muted] hover:text-[--color-ink]"
+            }`}
+            style={{ letterSpacing: '0.07em' }}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Summary
+          </button>
+          <button
+            onClick={() => setActiveTab("chat")}
+            className={`py-3 px-5 font-sans text-xs font-bold uppercase tracking-wider border-b-2 flex items-center gap-2 transition-all cursor-pointer -mb-px ${
+              activeTab === "chat"
+                ? "border-[--color-ink] text-[--color-ink]"
+                : "border-transparent text-[--color-ink-muted] hover:text-[--color-ink]"
+            }`}
+            style={{ letterSpacing: '0.07em' }}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            AI Expert Chat
+            {summary && <span className="bg-[--color-headline-gold]/20 text-[--color-headline-gold] text-[9px] px-1.5 py-0.5 font-mono border border-[--color-headline-gold]/30">ASK AI</span>}
+          </button>
+        </div>
+
+        {/* Modal body */}
+        <div className="flex-1 overflow-y-auto p-5 bg-[--color-paper]" id="bill-modal-body">
+          {loading && (
+            <div className="flex flex-col items-center justify-center h-64 gap-4">
+              <Loader2 className="h-8 w-8 text-[--color-headline-gold] animate-spin" />
+              <div className="text-[--color-ink-muted] text-sm font-body italic animate-pulse">Running plain-language translation...</div>
+            </div>
+          )}
+
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 flex items-start gap-3 text-red-800">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5 text-red-600" />
+              <div>
+                <h4 className="font-sans font-semibold text-sm">Drafting Failed</h4>
+                <p className="text-xs text-red-600 mt-1">{error}</p>
+                <button onClick={onClose} className="mt-3 text-xs bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 border border-red-200 font-sans font-medium transition cursor-pointer">
+                  Close panel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && summary && (
+            <>
+              {activeTab === "summary" && (
+                <div className="space-y-5">
+                  {/* Title Info */}
+                  <div className="border-b-2 border-double border-[--color-ink] pb-4">
+                    <h2 className="text-xl font-headline font-bold text-[--color-ink] leading-snug" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+                      {summary.officialTitle}
+                    </h2>
+                    <p className="text-sm font-body text-[--color-headline-gold] mt-2 italic flex items-center gap-1">
+                      <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
+                      &quot;{summary.oneLiner}&quot;
+                    </p>
+                  </div>
+
+                  {/* Bill Meta Data Grid */}
+                  <div className="grid grid-cols-2 gap-3 bg-[--color-column-bg] p-4 border border-[--color-rule]">
+                    <div>
+                      <div className="np-kicker text-[--color-ink-faint] mb-0.5">Sponsor</div>
+                      <div className="text-sm font-body font-bold text-[--color-ink]">{summary.sponsorName}</div>
+                    </div>
+                    <div>
+                      <div className="np-kicker text-[--color-ink-faint] mb-0.5">Chamber & Party</div>
+                      <div className="text-sm font-mono text-[--color-ink-secondary]">{summary.sponsorPartyChamber}</div>
+                    </div>
+                    <div>
+                      <div className="np-kicker text-[--color-ink-faint] mb-0.5">Current Status</div>
+                      <div className="text-sm font-sans font-semibold text-emerald-800">{summary.status}</div>
+                    </div>
+                    <div>
+                      <div className="np-kicker text-[--color-ink-faint] mb-0.5">Cost Classification</div>
+                      <div className="text-sm font-body text-[--color-headline-gold] flex items-center gap-1">
+                        <DollarSign className="h-4 w-4" /> CBO Review Required
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div>
+                    <div className="np-kicker text-[--color-ink-muted] flex items-center gap-1.5 mb-2">
+                      <ChevronRight className="h-3 w-3" /> Executive Digest
+                    </div>
+                    <div className="text-sm font-body text-[--color-ink-secondary] leading-relaxed bg-[--color-column-bg] p-4 border-l-4 border-[--color-headline-gold] border border-[--color-rule]">
+                      {summary.plainSummary}
+                    </div>
+                  </div>
+
+                  {/* Key Provisions */}
+                  <div>
+                    <div className="np-kicker text-[--color-ink-muted] flex items-center gap-1.5 mb-2">
+                      <ChevronRight className="h-3 w-3" /> Key Provisions
+                    </div>
+                    <ul className="space-y-2">
+                      {summary.keyProvisions.map((prov, i) => (
+                        <li key={i} className="flex gap-2.5 p-3 bg-[--color-column-bg] border border-[--color-rule]">
+                          <CheckCircle className="h-4 w-4 text-[--color-headline-gold] mt-0.5 flex-shrink-0" />
+                          <span className="text-sm font-body text-[--color-ink-secondary] leading-relaxed">{prov}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Pros & Cons */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-emerald-50 border border-emerald-200 p-4 space-y-3">
+                      <div className="np-kicker text-emerald-800 flex items-center gap-1.5">
+                        <CheckCircle className="h-3 w-3" /> Arguments For
+                      </div>
+                      <ul className="space-y-2">
+                        {summary.pros.map((pro, idx) => (
+                          <li key={idx} className="text-xs font-body text-emerald-900 flex gap-1.5 leading-relaxed">
+                            <span className="text-emerald-600 font-bold flex-shrink-0">•</span>
+                            <span>{pro}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="bg-red-50 border border-red-200 p-4 space-y-3">
+                      <div className="np-kicker text-red-800 flex items-center gap-1.5">
+                        <Flame className="h-3 w-3" /> Arguments Against
+                      </div>
+                      <ul className="space-y-2">
+                        {summary.cons.map((con, idx) => (
+                          <li key={idx} className="text-xs font-body text-red-900 flex gap-1.5 leading-relaxed">
+                            <span className="text-red-600 font-bold flex-shrink-0">•</span>
+                            <span>{con}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Financial Impact */}
+                  {summary.financialImpact && (
+                    <div className="bg-[--color-column-bg] border border-[--color-rule] p-4 space-y-2">
+                      <div className="np-kicker text-[--color-headline-gold] flex items-center gap-1.5">
+                        <DollarSign className="h-3 w-3" /> Estimated Budget Outlook
+                      </div>
+                      <p className="text-xs font-body text-[--color-ink-secondary] leading-relaxed">
+                        {summary.financialImpact}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "chat" && (
+                <div className="flex flex-col h-[520px] border border-[--color-rule] bg-[--color-column-bg] p-4">
+                  {/* Audience mode */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {[
+                      { id: "standard", label: "Standard" },
+                      { id: "eli5", label: "I'm 5" },
+                      { id: "eli15", label: "I'm 15" },
+                      { id: "policy_wonk", label: "Policy Wonk" }
+                    ].map((mode) => (
+                      <button
+                        key={mode.id}
+                        onClick={() => setAudienceMode(mode.id as typeof audienceMode)}
+                        disabled={aiResponding}
+                        className={`px-2.5 py-1 text-[10px] font-sans border transition-colors cursor-pointer ${
+                          audienceMode === mode.id
+                            ? "bg-[--color-ink] text-[--color-paper] border-[--color-ink]"
+                            : "bg-[--color-paper] text-[--color-ink-secondary] border-[--color-rule] hover:border-[--color-ink]"
+                        }`}
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                    {messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex flex-col max-w-[85%] ${
+                          msg.role === "user" ? "ml-auto items-end" : "mr-auto items-start"
+                        }`}
+                      >
+                        <div
+                          className={`p-3 text-xs leading-relaxed whitespace-pre-line border ${
+                            msg.role === "user"
+                              ? "bg-[--color-ink] text-[--color-paper] border-[--color-ink]"
+                              : "bg-[--color-paper] text-[--color-ink] border-[--color-rule] font-body"
+                          }`}
+                        >
+                          {msg.content}
+                        </div>
+                        <span className="text-[9px] font-mono text-[--color-ink-faint] mt-1 px-1">{msg.timestamp}</span>
+                      </div>
+                    ))}
+                    {aiResponding && (
+                      <div className="flex items-center gap-2 text-[--color-ink-muted] text-xs ml-2 animate-pulse">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-[--color-headline-gold]" />
+                        <span className="font-mono italic text-[10px]">CapitolExpert AI researching...</span>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                  {/* Quick suggestion chips */}
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {["Explain in more detail.", "What about a specific section?", "Compare to a similar past bill.", "How would this affect my state?"].map((suggestion, idx) => (
+                      <button
+                        key={`bill-refine-${idx}`}
+                        onClick={() => setInputValue(suggestion)}
+                        disabled={aiResponding}
+                        className="text-[10px] px-2 py-1 border border-[--color-rule] text-[--color-ink-muted] hover:border-[--color-ink] hover:text-[--color-ink] transition-colors cursor-pointer font-sans bg-[--color-paper]"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleSendMessage} className="mt-3 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder={`Ask about ${summary.billId}...`}
+                      disabled={aiResponding}
+                      className="flex-1 bg-[--color-paper] border border-[--color-rule] focus:border-[--color-ink] focus:outline-none px-4 py-2 text-xs font-sans text-[--color-ink] transition-colors"
+                    />
+                    <button
+                      type="submit"
+                      id="send-modal-chat"
+                      disabled={aiResponding || !inputValue.trim()}
+                      className="p-2.5 bg-[--color-ink] hover:bg-[--color-headline] disabled:opacity-40 text-[--color-paper] transition-colors cursor-pointer"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  </form>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
       <div className="w-full max-w-3xl bg-slate-900 border-l border-slate-800 h-full flex flex-col shadow-2xl relative" id="bill-modal-container">
         {/* Header */}
         <div className="px-6 py-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">

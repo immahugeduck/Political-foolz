@@ -1,1 +1,146 @@
 @import "tailwindcss";
+
+@theme {
+  /* === NEWSPAPER COLOR PALETTE === */
+  --color-paper: #F5F0E3;
+  --color-paper-dark: #EDE5CC;
+  --color-paper-mid: #E8E0C8;
+  --color-ink: #111111;
+  --color-ink-secondary: #3A3530;
+  --color-ink-muted: #7A7060;
+  --color-ink-faint: #B0A890;
+  --color-rule: #C8BEA0;
+  --color-rule-dark: #8A7D5C;
+  --color-masthead: #0F0F0F;
+  --color-headline: #8B1A1A;
+  --color-headline-blue: #1B3A5C;
+  --color-headline-gold: #8B6914;
+  --color-headline-green: #1A5C2A;
+  --color-column-bg: #FEFCF8;
+  --color-byline: #5A4E3C;
+
+  /* === NEWSPAPER TYPOGRAPHY === */
+  --font-headline: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-body: "PT Serif", Georgia, "Times New Roman", serif;
+  --font-sans: "Source Sans 3", system-ui, -apple-system, sans-serif;
+  --font-mono: "Courier Prime", "Courier New", Courier, monospace;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-paper);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-headline);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  /* Newspaper rule */
+  .np-rule {
+    border: none;
+    border-top: 1px solid var(--color-rule-dark);
+  }
+
+  .np-rule-thick {
+    border: none;
+    border-top: 3px double var(--color-ink);
+  }
+
+  .np-rule-thin {
+    border: none;
+    border-top: 1px solid var(--color-rule);
+  }
+
+  /* Newspaper masthead decoration */
+  .masthead-rule {
+    height: 4px;
+    background: linear-gradient(to right, var(--color-masthead) 50%, var(--color-headline) 50%);
+  }
+
+  /* Newspaper card */
+  .np-card {
+    background: var(--color-column-bg);
+    border: 1px solid var(--color-rule);
+    border-radius: 0;
+  }
+
+  .np-card-shadow {
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.08);
+  }
+
+  /* Dropcap style */
+  .np-dropcap::first-letter {
+    float: left;
+    font-family: var(--font-headline);
+    font-size: 3.5em;
+    line-height: 0.8;
+    padding-right: 6px;
+    padding-top: 4px;
+    color: var(--color-ink);
+    font-weight: 900;
+  }
+
+  /* Newspaper column dividers */
+  .np-col-divider {
+    border-right: 1px solid var(--color-rule);
+  }
+
+  /* Newspaper badge / kicker */
+  .np-kicker {
+    font-family: var(--font-sans);
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-headline);
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-paper);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-rule-dark);
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-muted);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+@keyframes pressRoll {
+  0%, 100% { transform: scaleX(1); }
+  50%       { transform: scaleX(0.97); }
+}
+
+.animate-press-roll {
+  animation: pressRoll 1.8s ease-in-out infinite;
+}
