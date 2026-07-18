@@ -1,6 +1,110 @@
 import React from "react";
-import { CalendarDays, MapPin, Clock, Tag, ChevronDown, RefreshCw, Layers, Bell } from "lucide-react";
+import { CalendarDays, Clock, RefreshCw, Layers, Bell } from "lucide-react";
 import { LegislativeSession } from "../types";
+
+interface LegislativeSessionsProps {
+  sessions: LegislativeSession[];
+  onRefresh: () => void;
+  isLoading: boolean;
+}
+
+export default function LegislativeSessions({ sessions, onRefresh, isLoading }: LegislativeSessionsProps) {
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="border-b-2 border-double border-[--color-ink] pb-3 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <div className="np-kicker text-[--color-headline] mb-1 flex items-center gap-1.5">
+            <CalendarDays className="h-3 w-3" />
+            Legislative Calendar
+          </div>
+          <h2 className="text-2xl font-headline font-bold text-[--color-ink] leading-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+            Upcoming Congressional Schedule
+          </h2>
+          <p className="text-xs font-body text-[--color-ink-muted] mt-1">Scheduled chamber floor debates and committee hearings (119th Congress, June 2026)</p>
+        </div>
+        <button
+          onClick={onRefresh}
+          id="refresh-calendar-schedules"
+          disabled={isLoading}
+          className="self-start px-3.5 py-1.5 bg-[--color-ink] hover:bg-[--color-headline] disabled:opacity-50 text-[--color-paper] text-xs font-sans font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+        >
+          <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} />
+          {isLoading ? "Synchronizing..." : "Refresh Schedule"}
+        </button>
+      </div>
+
+      {/* Calendar List */}
+      <div className="space-y-4">
+        {sessions.map((session, idx) => {
+          const isHouse = session.chamber.toLowerCase() === "house";
+          const isSenate = session.chamber.toLowerCase() === "senate";
+          const isHigh = session.importance.toLowerCase() === "high";
+
+          return (
+            <div
+              key={idx}
+              className="bg-[--color-column-bg] border border-[--color-rule] hover:border-[--color-rule-dark] p-5 transition-colors"
+              id={`session-card-${idx}`}
+            >
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                <div className="space-y-3 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`np-kicker border px-2 py-0.5 ${
+                      isHouse
+                        ? "text-blue-800 border-blue-200 bg-blue-50"
+                        : isSenate
+                        ? "text-[--color-headline-blue] border-[--color-headline-blue]/30 bg-[--color-headline-blue]/10"
+                        : "text-emerald-800 border-emerald-200 bg-emerald-50"
+                    }`}>
+                      {session.chamber.toUpperCase()}
+                    </span>
+                    <span className="np-kicker text-[--color-ink-muted] border border-[--color-rule] bg-[--color-paper] px-2 py-0.5 flex items-center gap-1">
+                      <Clock className="h-2.5 w-2.5" />{session.time}
+                    </span>
+                    <span className="np-kicker text-[--color-ink-muted] border border-[--color-rule] bg-[--color-paper] px-2 py-0.5">
+                      {session.status}
+                    </span>
+                    {isHigh && (
+                      <span className="np-kicker text-[--color-headline] border border-[--color-headline]/25 bg-[--color-headline]/10 px-2 py-0.5 flex items-center gap-1">
+                        <Layers className="h-2.5 w-2.5" /> HIGH IMPORTANCE
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-headline font-bold text-[--color-ink] leading-snug" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+                      {session.topic}
+                    </h3>
+                    <p className="text-xs font-body text-[--color-ink-muted] mt-2 leading-relaxed">
+                      {session.details}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center md:items-end justify-between md:flex-col gap-3 border-t md:border-t-0 border-[--color-rule] pt-3 md:pt-0 flex-shrink-0">
+                  <div className="md:text-right">
+                    <div className="np-kicker text-[--color-ink-faint]">Scheduled date</div>
+                    <div className="text-sm font-mono font-bold text-[--color-ink] mt-0.5">{session.date}</div>
+                  </div>
+                  <button
+                    onClick={() => alert(`Alert requested for: ${session.topic}. You will be notified when live feeds start.`)}
+                    className="px-3 py-1.5 bg-[--color-paper] border border-[--color-rule] hover:border-[--color-ink] text-[--color-ink-secondary] text-xs font-sans font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Bell className="h-3.5 w-3.5" />
+                    Watch Live
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 interface LegislativeSessionsProps {
   sessions: LegislativeSession[];

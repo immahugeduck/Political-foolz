@@ -109,7 +109,105 @@ Report generated at ${new Date().toLocaleString()}`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" id="diagnostics-modal">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[--color-ink]/70 backdrop-blur-sm animate-fade-in" id="diagnostics-modal">
+      <div className="relative w-full max-w-2xl bg-[--color-paper] border border-[--color-rule-dark] overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[--color-rule] bg-[--color-column-bg]">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-[--color-masthead] text-[--color-headline-gold]">
+              <Cpu className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-headline font-bold text-[--color-ink]" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>API Key Integrity Diagnostics</h3>
+              <p className="np-kicker text-[--color-ink-faint]">Real-time status of service connections</p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-1.5 hover:bg-[--color-paper-dark] text-[--color-ink-muted] hover:text-[--color-ink] transition-colors cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-5">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-4">
+              <RefreshCw className="h-10 w-10 text-[--color-headline-gold] animate-spin" />
+              <div className="text-center">
+                <p className="text-sm font-body font-semibold text-[--color-ink]">Dispatching live API queries...</p>
+                <p className="text-xs font-body text-[--color-ink-muted] mt-1">Testing credentials on active service paths.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm font-body text-[--color-ink-muted] leading-relaxed">
+                The checklist below reflects the response status of each provider. Valid credentials unlock full-fidelity, search-grounded congressional lookups.
+              </p>
+
+              {data && (
+                <div className="space-y-3">
+                  {[
+                    { key: "gemini", label: "GEMINI", name: "Gemini 3.5 Flash", result: data.gemini, color: "bg-blue-50 text-blue-800 border-blue-200" },
+                    { key: "openai", label: "OPENAI", name: "GPT-4o Mini Fallback", result: data.openai, color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+                    { key: "civic", label: "CIVIC", name: "Google Civic Info API", result: data.googleCivic, color: "bg-amber-50 text-amber-800 border-amber-200" },
+                  ].map((item) => (
+                    <div key={item.key} className="p-4 border border-[--color-rule] bg-[--color-column-bg] hover:bg-[--color-paper] transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <span className={`px-2 py-0.5 text-[10px] font-mono font-bold border ${item.color}`}>{item.label}</span>
+                          <h4 className="font-sans font-semibold text-sm text-[--color-ink]">{item.name}</h4>
+                        </div>
+                        {getStatusBadge(item.result.status)}
+                      </div>
+                      <p className="text-xs font-body text-[--color-ink-secondary] mt-2.5 leading-normal">
+                        {item.result.message}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 bg-[--color-column-bg] border-t border-[--color-rule]">
+          <button
+            onClick={copyReport}
+            disabled={loading || !data}
+            className="inline-flex items-center px-4 py-2 text-xs font-sans font-semibold text-[--color-ink-secondary] bg-[--color-paper] border border-[--color-rule] hover:border-[--color-ink] focus:outline-none transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {copied ? (
+              <><Check className="h-3.5 w-3.5 mr-1.5 text-emerald-600" />Copied!</>
+            ) : (
+              <><Copy className="h-3.5 w-3.5 mr-1.5" />Copy Report</>
+            )}
+          </button>
+
+          <div className="flex gap-2">
+            <button
+              onClick={runTests}
+              disabled={loading}
+              className="inline-flex items-center px-4 py-2 text-xs font-sans font-semibold text-[--color-ink-secondary] bg-[--color-paper] border border-[--color-rule] hover:border-[--color-ink] focus:outline-none transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+              Re-Test
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-sans font-semibold text-[--color-paper] bg-[--color-ink] hover:bg-[--color-headline] transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
       <div className="relative w-full max-w-2xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">

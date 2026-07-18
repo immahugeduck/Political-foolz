@@ -219,103 +219,61 @@ export default function CitizensConsensus() {
   return (
     <div className="space-y-6">
       {/* Immersive Header Block */}
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 text-white rounded-2xl border border-slate-800 p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
-        <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center space-x-1.5 p-1 px-3 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-mono tracking-wider font-bold">
-              <Vote className="h-3.5 w-3.5" />
-              <span>THE CITIZENS' BALOT BOX</span>
-            </div>
-            <h2 className="text-2xl font-sans font-black tracking-tight text-slate-100">
-              The Citizens&apos; Consensus Portal
-            </h2>
-            <p className="text-slate-400 text-xs leading-relaxed">
-              Express your vote on critical pieces of the 119th Congress dockets. See real-time community distributions, and benchmark your personal legislative principles directly against actual roll calls and your followed legislators.
-            </p>
-          </div>
-
-          {/* Citizen Setup Box */}
-          <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2 shrink-0 md:w-80">
-            <span className="text-[10px] font-mono font-bold text-amber-500 uppercase tracking-wider block">Citizen Profile Setup</span>
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-slate-400 block font-semibold">Your Display Alias:</label>
-              <input
-                type="text"
-                value={userNameInput}
-                onChange={(e) => saveUserName(e.target.value)}
-                placeholder="e.g. Patriot Citizen"
-                className="w-full bg-slate-900 border border-slate-700/60 rounded px-2.5 py-1 text-xs text-white focus:outline-none focus:border-amber-500 font-medium"
-              />
-              <p className="text-[9px] text-slate-500">Used purely locally for your citizen ballot feedback contributions.</p>
-            </div>
-          </div>
+      <div className="border-b-2 border-double border-[--color-ink] pb-3">
+        <div className="np-kicker text-[--color-headline] mb-1 flex items-center gap-1.5">
+          <Vote className="h-3 w-3" />
+          Citizens&apos; Ballot Box
         </div>
+        <h2 className="text-2xl font-headline font-bold text-[--color-ink] leading-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+          The Citizens&apos; Consensus Portal
+        </h2>
+        <p className="text-xs font-body text-[--color-ink-muted] mt-1 max-w-2xl">
+          Express your vote on critical 119th Congress dockets. See community distributions and benchmark your principles against actual roll calls.
+        </p>
+        <div className="np-rule-thin mt-2" />
       </div>
 
-      {/* KPI Stats Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Metric 1 */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-1.5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">Your Ballots Cast</span>
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-            </div>
-            <h4 className="text-3xl font-sans font-black text-slate-900 mt-1">
-              {totalVotesCast} <span className="text-xs font-normal text-slate-400">/ {SEED_BILLS.length} Bills</span>
-            </h4>
-          </div>
-          <p className="text-[10px] text-slate-500 leading-snug">
-            Your active feedback represents local grassroots sentiment directly in our offline ledger comparison model.
-          </p>
+      {/* Citizen alias + KPI row */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="md:col-span-1 border border-[--color-rule] bg-[--color-column-bg] p-4 space-y-2">
+          <div className="np-kicker text-[--color-headline]">Citizen Profile</div>
+          <label className="text-xs font-sans text-[--color-ink-muted] block">Display Alias:</label>
+          <input
+            type="text"
+            value={userNameInput}
+            onChange={(e) => saveUserName(e.target.value)}
+            placeholder="e.g. Patriot Citizen"
+            className="w-full bg-[--color-paper] border border-[--color-rule] focus:border-[--color-ink] px-2.5 py-1 text-xs text-[--color-ink] outline-none font-sans"
+          />
+          <p className="text-[9px] font-mono text-[--color-ink-faint]">Stored locally only.</p>
         </div>
 
-        {/* Metric 2 */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-1.5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">Citizen Community Size</span>
-              <Users className="h-4 w-4 text-blue-500" />
+        {[
+          { label: "Your Ballots Cast", value: `${totalVotesCast} / ${SEED_BILLS.length}`, sub: "Bills reviewed", icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" /> },
+          { label: "Citizen Community", value: "6,910", sub: "Simulated citizens", icon: <Users className="h-4 w-4 text-[--color-headline-blue]" /> },
+          { label: "Representation Gap", value: "46%", sub: "Divergence index", icon: <Scale className="h-4 w-4 text-[--color-headline]" /> },
+        ].map((stat, i) => (
+          <div key={i} className="border border-[--color-rule] bg-[--color-column-bg] p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <div className="np-kicker text-[--color-ink-faint]">{stat.label}</div>
+              {stat.icon}
             </div>
-            <h4 className="text-3xl font-sans font-black text-slate-900 mt-1">
-              6,910 <span className="text-xs font-normal text-slate-400">Simulated Citizens</span>
-            </h4>
+            <div className="text-3xl font-headline font-black text-[--color-ink]" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{stat.value}</div>
+            <div className="text-xs font-sans text-[--color-ink-muted] mt-1">{stat.sub}</div>
           </div>
-          <p className="text-[10px] text-slate-500 leading-snug">
-            Aggregated state feedback tracks divergence indexes between politicians and actual consensus votes.
-          </p>
-        </div>
-
-        {/* Metric 3 */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-1.5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider">Representative Gap Index</span>
-              <Scale className="h-4 w-4 text-purple-500" />
-            </div>
-            <h4 className="text-3xl font-sans font-black text-slate-900 mt-1">
-              46% <span className="text-xs font-normal text-red-500 font-bold">Divergence</span>
-            </h4>
-          </div>
-          <p className="text-[10px] text-slate-500 leading-snug">
-            The mathematical rate at which mainstream congressional politicians vote against the dominant public consensus.
-          </p>
-        </div>
+        ))}
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-white rounded-xl border border-slate-200 shadow-sm">
-          <Loader2 className="h-6 w-6 text-amber-500 animate-spin" />
-          <span className="text-xs font-mono text-slate-500">Syncing local voter consensus statistics with congressional rolls...</span>
+        <div className="flex flex-col items-center justify-center p-16 space-y-3 border border-[--color-rule] bg-[--color-column-bg]">
+          <Loader2 className="h-6 w-6 text-[--color-headline-gold] animate-spin" />
+          <span className="text-xs font-mono text-[--color-ink-muted] italic">Syncing consensus statistics with congressional rolls...</span>
         </div>
       ) : (
         <div className="space-y-6">
-          <h3 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-2 px-1">
+          <div className="np-kicker text-[--color-ink-faint] border-b border-[--color-rule] pb-2">
             Current Active Consensus Bill Ballots
-          </h3>
+          </div>
 
           <div className="space-y-6">
             {SEED_BILLS.map((bill) => {
@@ -324,7 +282,6 @@ export default function CitizensConsensus() {
               const presetComments = defaultComments[bill.id] || [];
               const mergedComments = [...userCommentsPool, ...presetComments];
 
-              // Dynamic Adjustments based on user selection to demonstrate live interactivity
               let yesCount = bill.simulatedYesVotes;
               let noCount = bill.simulatedNoVotes;
               if (myVote === "Yea") yesCount += 1;
@@ -334,170 +291,183 @@ export default function CitizensConsensus() {
               const noPct = 100 - yesPct;
 
               return (
-                <div key={bill.id} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden" id={`ballot-${bill.id.toLowerCase()}`}>
-                  {/* Title Bar block */}
-                  <div className="p-5 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div key={bill.id} className="border border-[--color-rule] bg-[--color-column-bg] overflow-hidden" id={`ballot-${bill.id.toLowerCase()}`}>
+                  {/* Title bar */}
+                  <div className="p-5 border-b border-[--color-rule] bg-[--color-paper] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 text-xs font-mono font-black bg-slate-900 text-white rounded">
+                        <span className="px-2 py-0.5 text-xs font-mono font-black bg-[--color-ink] text-[--color-paper]">
                           {bill.id}
                         </span>
-                        <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded uppercase">
+                        <span className="np-kicker text-[--color-headline-blue] border border-[--color-headline-blue]/25 bg-[--color-headline-blue]/10 px-2 py-0.5">
                           {bill.category}
                         </span>
                       </div>
-                      <h4 className="text-base font-sans font-extrabold text-slate-900 tracking-tight">
+                      <h4 className="text-base font-headline font-bold text-[--color-ink] tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
                         {bill.title}
                       </h4>
-                      <p className="text-xs text-slate-600 font-medium">
+                      <p className="text-xs font-body text-[--color-ink-secondary]">
                         {bill.oneLiner}
                       </p>
                     </div>
-
-                    {/* Official Congress Status */}
-                    <div className="bg-white p-2.5 px-3.5 rounded-xl border border-slate-200 shadow-sm text-right shrink-0">
-                      <div className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-wider">Congress Docket Status</div>
-                      <div className="text-[11px] font-bold text-slate-850 leading-tight">{bill.officialStatus}</div>
-                      <div className="text-[10px] text-slate-500 font-semibold">{bill.congressOutcome}</div>
+                    <div className="border border-[--color-rule] p-3 bg-[--color-column-bg] shrink-0 text-right min-w-[180px]">
+                      <div className="np-kicker text-[--color-ink-faint]">Congress Docket Status</div>
+                      <div className="text-xs font-sans font-bold text-[--color-ink] leading-tight mt-0.5">{bill.officialStatus}</div>
+                      <div className="text-xs font-mono text-[--color-ink-muted] mt-0.5">{bill.congressOutcome}</div>
                     </div>
                   </div>
 
-                  {/* Pro & Con split list */}
-                  <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5 border-b border-slate-100">
-                    <div className="space-y-2 bg-emerald-50/20 p-4 rounded-xl border border-emerald-500/10">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
+                  {/* Pro & Con */}
+                  <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-[--color-rule]">
+                    <div className="space-y-2 p-4 border border-emerald-200 bg-emerald-50/30">
+                      <div className="flex items-center gap-1.5 text-xs font-sans font-bold text-emerald-800">
                         <ThumbsUp className="h-4 w-4" /> Pros & Civic Arguments
                       </div>
-                      <ul className="space-y-1.5 list-disc pl-4 text-xs text-slate-600 leading-relaxed font-medium">
+                      <ul className="space-y-1.5 list-disc pl-4 text-xs font-body text-[--color-ink-secondary] leading-relaxed">
                         {bill.pros.map((pro, index) => <li key={index}>{pro}</li>)}
                       </ul>
                     </div>
-
-                    <div className="space-y-2 bg-red-50/20 p-4 rounded-xl border border-red-500/10">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-red-800">
+                    <div className="space-y-2 p-4 border border-red-200 bg-red-50/30">
+                      <div className="flex items-center gap-1.5 text-xs font-sans font-bold text-red-800">
                         <ThumbsDown className="h-4 w-4" /> Cons & Criticisms
                       </div>
-                      <ul className="space-y-1.5 list-disc pl-4 text-xs text-slate-600 leading-relaxed font-medium">
+                      <ul className="space-y-1.5 list-disc pl-4 text-xs font-body text-[--color-ink-secondary] leading-relaxed">
                         {bill.cons.map((con, index) => <li key={index}>{con}</li>)}
                       </ul>
                     </div>
                   </div>
 
-                  {/* Casting Box & Results Compare */}
-                  <div className="p-5 bg-slate-50/30 border-b border-slate-100 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                    {/* Ballot Action (Left) */}
+                  {/* Voting + Results */}
+                  <div className="p-5 bg-[--color-paper] border-b border-[--color-rule] grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
                     <div className="lg:col-span-5 space-y-3">
-                      <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest block">Cast Your Citizen Ballot</span>
-                      
+                      <div className="np-kicker text-[--color-ink-faint]">Cast Your Citizen Ballot</div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleCastVote(bill.id, "Yea")}
-                          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs border transition cursor-pointer ${
-                            myVote === "Yea"
-                              ? "bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]"
-                              : "bg-white text-slate-700 hover:text-emerald-700 hover:bg-emerald-50/40 border-slate-200"
+                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 font-sans font-bold text-xs border transition cursor-pointer ${
+                            myVote === "Yea" ? "bg-emerald-700 text-white border-emerald-700" : "bg-[--color-column-bg] text-[--color-ink] hover:border-emerald-500 border-[--color-rule]"
                           }`}
                         >
-                          <CheckCircle2 className={`h-4 w-4 ${myVote === "Yea" ? "text-white" : "text-emerald-500"}`} />
-                          VOTE YES / YEA
+                          <CheckCircle2 className={`h-4 w-4 ${myVote === "Yea" ? "text-white" : "text-emerald-600"}`} />
+                          VOTE YEA
                         </button>
-
                         <button
                           onClick={() => handleCastVote(bill.id, "Nay")}
-                          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs border transition cursor-pointer ${
-                            myVote === "Nay"
-                              ? "bg-red-600 text-white border-red-600 shadow-md scale-[1.02]"
-                              : "bg-white text-slate-700 hover:text-red-700 hover:bg-red-50/40 border-slate-200"
+                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 font-sans font-bold text-xs border transition cursor-pointer ${
+                            myVote === "Nay" ? "bg-red-700 text-white border-red-700" : "bg-[--color-column-bg] text-[--color-ink] hover:border-red-500 border-[--color-rule]"
                           }`}
                         >
-                          <XCircle className={`h-4 w-4 ${myVote === "Nay" ? "text-white" : "text-red-500"}`} />
-                          VOTE NO / NAY
+                          <XCircle className={`h-4 w-4 ${myVote === "Nay" ? "text-white" : "text-red-600"}`} />
+                          VOTE NAY
                         </button>
                       </div>
-
                       {myVote ? (
-                        <div className="p-2.5 bg-emerald-50 border border-emerald-150 rounded-lg text-[10.5px] text-emerald-800 font-bold flex items-center gap-1.5">
+                        <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-sans font-bold flex items-center gap-1.5">
                           <CheckCircle2 className="h-4 w-4 shrink-0" />
-                          <span>Your ballot has been securely cast: &ldquo;{myVote}&rdquo;! Alignment analyzed below.</span>
+                          Ballot cast: &ldquo;{myVote}&rdquo; — alignment analyzed below.
                         </div>
                       ) : (
-                        <p className="text-[10px] text-slate-400 text-center font-semibold italic">
-                          Click above to record your vote and compare with politicians instantly.
-                        </p>
+                        <p className="text-xs font-body text-[--color-ink-faint] italic">Cast your vote above to compare with politicians.</p>
                       )}
                     </div>
 
-                    {/* Community consensus distribution progress (Center) */}
-                    <div className="lg:col-span-4 bg-white p-4.5 rounded-xl border border-slate-200 space-y-3.5 shadow-sm">
+                    <div className="lg:col-span-4 border border-[--color-rule] bg-[--color-column-bg] p-4 space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-[10.5px] font-sans font-bold text-slate-800 flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5 text-blue-500" /> Community Consensus split
-                        </span>
-                        <span className="text-[10px] font-mono text-slate-400 font-bold">{totalVoters} Cast</span>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="h-4.5 w-full bg-slate-100 rounded-lg overflow-hidden flex font-mono text-[9px] font-bold text-white text-center">
-                          <div className="bg-emerald-600 h-full flex items-center justify-center transition-all duration-500" style={{ width: `${yesPct}%` }}>
-                            {yesPct >= 15 && `${yesPct}% YEA`}
-                          </div>
-                          <div className="bg-red-600 h-full flex items-center justify-center transition-all duration-500" style={{ width: `${noPct}%` }}>
-                            {noPct >= 15 && `${noPct}% NAY`}
-                          </div>
+                        <div className="flex items-center gap-1 np-kicker text-[--color-ink-muted]">
+                          <Users className="h-3 w-3" /> Community Consensus
                         </div>
-                        {yesPct < 15 && (
-                          <div className="flex justify-between text-[9px] font-mono text-slate-500 font-bold">
-                            <span>{yesPct}% YEA</span>
-                            <span>{noPct}% NAY</span>
-                          </div>
-                        )}
+                        <span className="np-kicker text-[--color-ink-faint]">{totalVoters} cast</span>
                       </div>
-
-                      <p className="text-[9.5px] text-slate-500 leading-snug">
-                        Real-time community distributions are weighted based on geographic states and civic involvement indexes.
-                      </p>
+                      <div className="h-4 w-full bg-[--color-rule] overflow-hidden flex font-mono text-[9px] font-bold text-white">
+                        <div className="bg-emerald-700 h-full flex items-center justify-center transition-all duration-500" style={{ width: `${yesPct}%` }}>
+                          {yesPct >= 15 && `${yesPct}%`}
+                        </div>
+                        <div className="bg-[--color-headline] h-full flex items-center justify-center transition-all duration-500" style={{ width: `${noPct}%` }}>
+                          {noPct >= 15 && `${noPct}%`}
+                        </div>
+                      </div>
+                      <div className="flex justify-between np-kicker text-[--color-ink-muted]">
+                        <span>{yesPct}% YEA</span>
+                        <span>{noPct}% NAY</span>
+                      </div>
                     </div>
 
-                    {/* Politician Matchup alignment (Right) */}
-                    <div className="lg:col-span-3 space-y-2.5">
-                      <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest block">Followed Legislators Match</span>
-                      
+                    <div className="lg:col-span-3 space-y-2">
+                      <div className="np-kicker text-[--color-ink-faint]">Legislator Match</div>
                       <div className="space-y-1.5">
                         {(() => {
-                          // Find followed legs from global state (simulated by finding prominent ones)
-                          // We can select 2-3 prominent ones like Warren and Vance
                           const matchLegs = legislators.filter(l => ["Elizabeth Warren", "J.D. Vance", "Chuck Schumer", "Ted Cruz", "Elise Stefanik"].includes(l.name)).slice(0, 2);
-                          
                           if (matchLegs.length === 0) {
-                            return <p className="text-[10px] text-slate-400 italic font-semibold">No followed politicians. Track them in Civics Scorecards!</p>;
+                            return <p className="text-xs font-body text-[--color-ink-faint] italic">No legislators tracked.</p>;
                           }
-
                           return matchLegs.map(leg => {
-                            // Synthesize a vote stance based on bill category & party
                             let legVote = "Yea";
                             if (bill.id === "HR-58" && leg.party === "D") legVote = "Nay";
                             if (bill.id === "S-12" && leg.party === "D") legVote = "Nay";
-                            if (bill.id === "HR-104" && leg.name === "Elizabeth Warren") legVote = "Nay"; // Left critic
-                            if (bill.id === "HR-82" && leg.name === "J.D. Vance") legVote = "Yea"; // Populist support
-
+                            if (bill.id === "HR-104" && leg.name === "Elizabeth Warren") legVote = "Nay";
+                            if (bill.id === "HR-82" && leg.name === "J.D. Vance") legVote = "Yea";
                             const isAligned = myVote ? myVote === legVote : null;
-
                             return (
-                              <div key={leg.id} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-slate-200">
-                                <div className="flex items-center space-x-2">
-                                  <div className={`h-1.5 w-1.5 rounded-full ${leg.party === "D" ? "bg-blue-600" : "bg-red-600"}`}></div>
-                                  <span className="font-semibold text-slate-800">{leg.name}</span>
-                                </div>
+                              <div key={leg.id} className="flex items-center justify-between text-xs bg-[--color-column-bg] p-2 border border-[--color-rule]">
                                 <div className="flex items-center gap-1.5">
-                                  <span className={`px-1.5 py-0.2 rounded font-mono text-[9px] font-bold ${
-                                    legVote === "Yea" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
-                                  }`}>
-                                    {legVote}
-                                  </span>
+                                  <div className={`h-1.5 w-1.5 ${leg.party === "D" ? "bg-[--color-headline-blue]" : "bg-[--color-headline]"}`}></div>
+                                  <span className="font-sans font-semibold text-[--color-ink] text-[10px]">{leg.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className={`np-kicker ${legVote === "Yea" ? "text-emerald-700" : "text-[--color-headline]"}`}>{legVote}</span>
                                   {isAligned !== null && (
-                                    <span className={`text-[9.5px] font-black ${isAligned ? "text-emerald-600" : "text-red-500"}`}>
-                                      {isAligned ? "✓ Match" : "✗ Gap"}
+                                    <span className={`text-[9px] font-black ${isAligned ? "text-emerald-600" : "text-[--color-headline]"}`}>
+                                      {isAligned ? "✓" : "✗"}
                                     </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comment section */}
+                  <div className="p-5 space-y-3">
+                    <div className="flex items-center gap-1.5 np-kicker text-[--color-ink-muted]">
+                      <MessageSquare className="h-3 w-3" />
+                      Citizen Feedback ({mergedComments.length})
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newCommentText[bill.id] || ""}
+                        onChange={(e) => setNewCommentText(prev => ({ ...prev, [bill.id]: e.target.value }))}
+                        placeholder="Add a comment..."
+                        className="flex-1 bg-[--color-paper] border border-[--color-rule] focus:border-[--color-ink] px-3 py-1.5 text-xs text-[--color-ink] outline-none font-sans"
+                      />
+                      <button
+                        onClick={() => handleAddComment(bill.id)}
+                        className="bg-[--color-ink] hover:bg-[--color-headline] text-[--color-paper] font-sans font-bold text-xs px-4 py-1.5 transition cursor-pointer"
+                      >
+                        Submit
+                      </button>
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {mergedComments.map((c, idx) => (
+                        <div key={idx} className="bg-[--color-paper] p-2.5 border border-[--color-rule] border-l-4 border-l-[--color-headline-gold] text-xs">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-sans font-bold text-[--color-ink] text-[10px]">{c.author}</span>
+                            <span className="np-kicker text-[--color-ink-faint]">Verified</span>
+                          </div>
+                          <p className="font-body text-[--color-ink-secondary] italic">&ldquo;{c.comment}&rdquo;</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
                                   )}
                                 </div>
                               </div>

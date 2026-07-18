@@ -51,42 +51,49 @@ export default function VoterInformation() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-          <h2 className="text-xl font-bold font-sans tracking-tight text-slate-900 mb-2">Voter Information Lookup</h2>
-          <p className="text-sm text-slate-500 mb-6">
-            Enter your registered voting address to find upcoming elections, polling locations, and representative information. Powered by the Google Civic Information API.
-          </p>
-          
+      {/* Header */}
+      <div className="border-b-2 border-double border-[--color-ink] pb-3">
+        <div className="np-kicker text-[--color-headline] mb-1 flex items-center gap-1.5">
+          <MapPin className="h-3 w-3" />
+          Civic Records
+        </div>
+        <h2 className="text-2xl font-headline font-bold text-[--color-ink] leading-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+          Voter Information Lookup
+        </h2>
+        <p className="text-xs font-body text-[--color-ink-muted] mt-1">
+          Enter your registered address to find upcoming elections, polling locations, and ballot contests.
+        </p>
+        <div className="np-rule-thin mt-2" />
+      </div>
+
+      <div className="border border-[--color-rule] bg-[--color-column-bg] overflow-hidden">
+        <div className="p-6 border-b border-[--color-rule] bg-[--color-paper]">
           <form onSubmit={handleSearch} className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MapPin className="h-5 w-5 text-slate-400" />
+              <MapPin className="h-4 w-4 text-[--color-ink-muted]" />
             </div>
             <input
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Enter your full registered address (e.g., 1263 Pacific Ave, Santa Cruz, CA)"
-              className="block w-full pl-10 pr-24 py-3 sm:text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+              placeholder="e.g., 1263 Pacific Ave, Santa Cruz, CA"
+              className="block w-full pl-10 pr-24 py-3 text-sm bg-[--color-column-bg] border border-[--color-rule] focus:border-[--color-ink] outline-none text-[--color-ink] font-sans"
               disabled={loading}
             />
             <button
               type="submit"
               disabled={loading || !address.trim()}
-              className="absolute inset-y-1.5 right-1.5 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+              className="absolute inset-y-1.5 right-1.5 px-4 bg-[--color-ink] text-[--color-paper] text-xs font-sans font-bold hover:bg-[--color-headline] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center cursor-pointer"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                <div className="animate-spin h-4 w-4 border-2 border-[--color-paper] border-t-transparent" />
               ) : (
-                <>
-                  <Search className="h-4 w-4 mr-2" />
-                  Lookup
-                </>
+                <><Search className="h-4 w-4 mr-2" />Lookup</>
               )}
             </button>
           </form>
           {error && (
-            <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-start gap-2">
+            <div className="mt-4 p-3 bg-[--color-headline]/10 text-[--color-headline] text-sm border border-[--color-headline]/30 flex items-start gap-2">
               <AlertTriangle className="h-5 w-5 shrink-0" />
               <p>{error}</p>
             </div>
@@ -95,35 +102,32 @@ export default function VoterInformation() {
 
         {voterInfo && (
           <div className="p-6 space-y-8">
-            {/* Election Details */}
             {voterInfo.election && (
               <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-blue-600" />
-                  Upcoming Election
-                </h3>
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                  <div className="font-semibold text-blue-900 text-lg">{voterInfo.election.name}</div>
-                  <div className="text-blue-700 mt-1">Date: {voterInfo.election.electionDay}</div>
+                <div className="np-kicker text-[--color-headline] mb-3 flex items-center gap-1.5">
+                  <CheckCircle className="h-3 w-3" /> Upcoming Election
+                </div>
+                <div className="p-4 border border-[--color-rule] border-l-4 border-l-[--color-headline-blue] bg-[--color-paper]">
+                  <div className="font-headline font-bold text-[--color-ink] text-base" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{(voterInfo.election as any).name}</div>
+                  <div className="np-kicker text-[--color-ink-muted] mt-1">Date: {(voterInfo.election as any).electionDay}</div>
                 </div>
               </div>
             )}
 
-            {/* Polling Locations */}
-            {voterInfo.pollingLocations && voterInfo.pollingLocations.length > 0 && (
+            {(voterInfo as any).pollingLocations?.length > 0 && (
               <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Polling Locations</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {voterInfo.pollingLocations.map((loc: Record<string, any>, idx: number) => (
-                    <div key={idx} className="border border-slate-200 rounded-lg p-4 bg-white">
-                      <div className="font-medium text-slate-900">{loc.address?.locationName || "Polling Place"}</div>
-                      <div className="text-slate-600 text-sm mt-1">
+                <div className="np-kicker text-[--color-ink-muted] mb-3">Polling Locations</div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {(voterInfo as any).pollingLocations.map((loc: Record<string, any>, idx: number) => (
+                    <div key={idx} className="border border-[--color-rule] p-4 bg-[--color-column-bg]">
+                      <div className="font-sans font-bold text-sm text-[--color-ink]">{loc.address?.locationName || "Polling Place"}</div>
+                      <div className="font-body text-xs text-[--color-ink-secondary] mt-1 leading-relaxed">
                         {loc.address?.line1}<br />
                         {loc.address?.city}, {loc.address?.state} {loc.address?.zip}
                       </div>
                       {loc.pollingHours && (
-                        <div className="text-sm text-slate-500 mt-3 flex items-start gap-2">
-                          <span className="font-medium text-slate-700">Hours:</span> {loc.pollingHours}
+                        <div className="text-xs font-sans text-[--color-ink-muted] mt-2">
+                          <span className="font-bold">Hours:</span> {loc.pollingHours}
                         </div>
                       )}
                     </div>
@@ -132,36 +136,24 @@ export default function VoterInformation() {
               </div>
             )}
 
-            {/* State Information */}
-            {voterInfo.state && voterInfo.state.length > 0 && (
+            {(voterInfo as any).state?.length > 0 && (
               <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4">State Election Information</h3>
-                {voterInfo.state.map((state: Record<string, any>, idx: number) => (
-                  <div key={idx} className="border border-slate-200 rounded-lg p-4 bg-white">
-                    <div className="font-bold text-lg text-slate-900 mb-3">{state.name}</div>
-                    
+                <div className="np-kicker text-[--color-ink-muted] mb-3">State Election Information</div>
+                {(voterInfo as any).state.map((state: Record<string, any>, idx: number) => (
+                  <div key={idx} className="border border-[--color-rule] p-4 bg-[--color-column-bg]">
+                    <div className="font-headline font-bold text-[--color-ink] mb-2" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{state.name}</div>
                     {state.electionAdministrationBody && (
-                      <div className="space-y-3">
-                        <div className="font-medium text-slate-700">{state.electionAdministrationBody.name}</div>
-                        
-                        {state.electionAdministrationBody.electionInfoUrl && (
-                          <a href={state.electionAdministrationBody.electionInfoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-sm text-blue-600 hover:text-blue-800">
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Election Information Website
+                      <div className="space-y-2">
+                        <div className="font-sans font-semibold text-sm text-[--color-ink-secondary]">{state.electionAdministrationBody.name}</div>
+                        {[
+                          { url: state.electionAdministrationBody.electionInfoUrl, label: "Election Information Website" },
+                          { url: state.electionAdministrationBody.electionRegistrationUrl, label: "Voter Registration" },
+                          { url: state.electionAdministrationBody.electionRegistrationConfirmationUrl, label: "Confirm Registration" },
+                        ].filter(l => l.url).map((link, i) => (
+                          <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-xs font-sans font-bold text-[--color-headline-blue] hover:text-[--color-headline] hover:underline">
+                            <ExternalLink className="h-3 w-3 mr-2" />{link.label}
                           </a>
-                        )}
-                        {state.electionAdministrationBody.electionRegistrationUrl && (
-                          <a href={state.electionAdministrationBody.electionRegistrationUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-sm text-blue-600 hover:text-blue-800">
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Voter Registration
-                          </a>
-                        )}
-                        {state.electionAdministrationBody.electionRegistrationConfirmationUrl && (
-                          <a href={state.electionAdministrationBody.electionRegistrationConfirmationUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-sm text-blue-600 hover:text-blue-800">
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Confirm Registration
-                          </a>
-                        )}
+                        ))}
                       </div>
                     )}
                   </div>
@@ -169,38 +161,35 @@ export default function VoterInformation() {
               </div>
             )}
             
-            {/* Contests */}
-            {voterInfo.contests && voterInfo.contests.length > 0 && (
+            {(voterInfo as any).contests?.length > 0 && (
               <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Ballot Contests</h3>
-                <div className="space-y-4">
-                  {voterInfo.contests.map((contest: Record<string, any>, idx: number) => (
-                    <div key={idx} className="border border-slate-200 rounded-lg overflow-hidden">
-                      <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
-                        <div className="font-bold text-slate-900">{contest.office || contest.referendumTitle}</div>
-                        {contest.type && <div className="text-xs font-medium text-slate-500 uppercase mt-1">{contest.type}</div>}
+                <div className="np-kicker text-[--color-ink-muted] mb-3">Ballot Contests</div>
+                <div className="space-y-3">
+                  {(voterInfo as any).contests.map((contest: Record<string, any>, idx: number) => (
+                    <div key={idx} className="border border-[--color-rule] overflow-hidden">
+                      <div className="bg-[--color-paper] px-4 py-3 border-b border-[--color-rule]">
+                        <div className="font-headline font-bold text-[--color-ink] text-sm" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{contest.office || contest.referendumTitle}</div>
+                        {contest.type && <div className="np-kicker text-[--color-ink-muted] mt-0.5">{contest.type}</div>}
                       </div>
-                      
-                      {contest.candidates && contest.candidates.length > 0 && (
-                        <div className="p-4 divide-y divide-slate-100">
+                      {contest.candidates?.length > 0 && (
+                        <div className="p-4 divide-y divide-[--color-rule]">
                           {contest.candidates.map((candidate: Record<string, any>, cIdx: number) => (
                             <div key={cIdx} className="py-3 first:pt-0 last:pb-0">
-                              <div className="font-medium text-slate-900">{candidate.name}</div>
-                              {candidate.party && <div className="text-sm text-slate-600">{candidate.party}</div>}
-                              
+                              <div className="font-sans font-bold text-sm text-[--color-ink]">{candidate.name}</div>
+                              {candidate.party && <div className="np-kicker text-[--color-ink-muted] mt-0.5">{candidate.party}</div>}
                               <div className="mt-2 flex flex-wrap gap-3">
                                 {candidate.candidateUrl && (
-                                  <a href={candidate.candidateUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800">
+                                  <a href={candidate.candidateUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs font-sans font-bold text-[--color-headline-blue] hover:underline">
                                     <ExternalLink className="h-3 w-3 mr-1" /> Website
                                   </a>
                                 )}
                                 {candidate.email && (
-                                  <a href={`mailto:${candidate.email}`} className="inline-flex items-center text-xs text-slate-600 hover:text-slate-900">
+                                  <a href={`mailto:${candidate.email}`} className="inline-flex items-center text-xs font-sans text-[--color-ink-secondary] hover:text-[--color-ink]">
                                     <Mail className="h-3 w-3 mr-1" /> Email
                                   </a>
                                 )}
                                 {candidate.phone && (
-                                  <a href={`tel:${candidate.phone}`} className="inline-flex items-center text-xs text-slate-600 hover:text-slate-900">
+                                  <a href={`tel:${candidate.phone}`} className="inline-flex items-center text-xs font-sans text-[--color-ink-secondary] hover:text-[--color-ink]">
                                     <Phone className="h-3 w-3 mr-1" /> Phone
                                   </a>
                                 )}
@@ -209,13 +198,12 @@ export default function VoterInformation() {
                           ))}
                         </div>
                       )}
-                      
                       {contest.referendumText && (
-                        <div className="p-4 text-sm text-slate-700 bg-white">
-                          <p>{contest.referendumText}</p>
-                          {contest.referendumSubtitle && <p className="mt-2 text-slate-500 italic">{contest.referendumSubtitle}</p>}
+                        <div className="p-4 bg-[--color-column-bg]">
+                          <p className="text-sm font-body text-[--color-ink-secondary] leading-relaxed">{contest.referendumText}</p>
+                          {contest.referendumSubtitle && <p className="mt-2 text-xs font-body text-[--color-ink-muted] italic">{contest.referendumSubtitle}</p>}
                           {contest.referendumUrl && (
-                            <a href={contest.referendumUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 mt-3">
+                            <a href={contest.referendumUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs font-sans font-bold text-[--color-headline-blue] hover:underline mt-3">
                               <ExternalLink className="h-3 w-3 mr-1" /> Read More
                             </a>
                           )}
@@ -230,20 +218,18 @@ export default function VoterInformation() {
         )}
       </div>
       
-      {/* Active Elections Overview (Only shown when not searching specific address) */}
       {!voterInfo && elections.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-            <ShieldCheck className="h-5 w-5 mr-2 text-slate-700" />
-            Currently Active Elections
-          </h3>
+        <div className="border border-[--color-rule] bg-[--color-column-bg] p-6">
+          <div className="np-kicker text-[--color-headline] mb-4 flex items-center gap-1.5">
+            <ShieldCheck className="h-3 w-3" /> Active Elections
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {elections.map((election: Record<string, any>) => (
-              <div key={election.id} className="p-4 border border-slate-100 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-                <div className="font-medium text-slate-900 text-sm line-clamp-2">{election.name}</div>
-                <div className="text-slate-500 text-xs mt-2 flex justify-between items-center">
+              <div key={election.id} className="p-4 border border-[--color-rule] bg-[--color-paper] hover:bg-[--color-paper-dark] transition-colors">
+                <div className="font-sans font-bold text-sm text-[--color-ink] line-clamp-2">{election.name}</div>
+                <div className="text-xs font-sans text-[--color-ink-muted] mt-2 flex justify-between">
                   <span>{election.electionDay}</span>
-                  <span className="font-mono text-slate-400">ID: {election.id}</span>
+                  <span className="font-mono">#{election.id}</span>
                 </div>
               </div>
             ))}
