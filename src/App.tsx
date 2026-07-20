@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import Navigation from "./components/Navigation";
 import Dashboard from "./components/Dashboard";
 import PlainLanguageDirectory from "./components/PlainLanguageDirectory";
@@ -261,6 +262,9 @@ export default function App() {
           onClose={() => setShowDiagnostics(false)}
         />
       )}
+
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 }
