@@ -7,7 +7,6 @@ import dotenv from "dotenv";
 import pino from "pino";
 import pinoHttp from "pino-http";
 import { GoogleGenAI, Type } from "@google/genai";
-import { createServer as createViteServer } from "vite";
 import { OpenAI } from "openai";
 import { z } from "zod";
 
@@ -2609,6 +2608,9 @@ async function prewarmCache() {
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     console.log("Setting up Vite development middleware...");
+    // Import Vite lazily so the dev-only dependency is never bundled into the
+    // production/serverless build (@vercel/node traces top-level imports).
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
