@@ -32,7 +32,13 @@ if (!envResult.success) {
 const ENV = envResult.data;
 
 if (ENV.NODE_ENV === "production" && !ENV.APP_URL) {
-  throw new Error("APP_URL is required in production.");
+  // Don't hard-crash the process (and the Vercel deployment) when APP_URL is
+  // absent. The CORS configuration below already falls back to a safe set of
+  // default allowed origins (localhost + the known production hosts), so a
+  // missing APP_URL should degrade to a warning rather than a fatal error.
+  console.warn(
+    "APP_URL is not set in production; falling back to default allowed origins."
+  );
 }
 
 const app = express();
