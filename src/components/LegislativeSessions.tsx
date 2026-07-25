@@ -4,6 +4,8 @@ import { LegislativeSession } from "../types";
 
 interface LegislativeSessionsProps {
   sessions: LegislativeSession[];
+  onRefresh: () => void;
+  isLoading: boolean;
 }
 
 export default function LegislativeSessions({ sessions, onRefresh, isLoading }: LegislativeSessionsProps) {

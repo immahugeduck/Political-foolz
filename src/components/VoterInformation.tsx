@@ -3,7 +3,7 @@ import { Search, MapPin, CheckCircle, AlertTriangle, ShieldCheck, Mail, Phone, E
 
 export default function VoterInformation() {
   const [address, setAddress] = useState("");
-  const [voterInfo, setVoterInfo] = useState<Record<string, unknown> | null>(null);
+  const [voterInfo, setVoterInfo] = useState<Record<string, any> | null>(null);
   const [elections, setElections] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

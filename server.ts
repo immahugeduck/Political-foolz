@@ -2611,8 +2611,14 @@ async function startServer() {
   } else {
     console.log("Production mode: Serving static files...");
     const distPath = path.join(process.cwd(), "dist");
+    const staticLimiter = rateLimit({
+      windowMs: 60 * 1000,
+      max: 300,
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
     app.use(express.static(distPath));
-    app.get("/*splat", (req, res) => {
+    app.get("/*splat", staticLimiter, (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
