@@ -468,59 +468,6 @@ export default function CitizensConsensus() {
           </div>
         </div>
       )}
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Comment & Feedback Board (Bottom) */}
-                  <div className="p-5 bg-slate-50/10 space-y-4">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                      <MessageSquare className="h-4 w-4 text-slate-400" />
-                      <span>Citizen Feedback Loop ({mergedComments.length})</span>
-                    </div>
-
-                    {/* New Comment Submission bar */}
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newCommentText[bill.id] || ""}
-                        onChange={(e) => setNewCommentText(prev => ({ ...prev, [bill.id]: e.target.value }))}
-                        placeholder="Attach a brief feedback comment to this bill..."
-                        className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500 font-medium"
-                      />
-                      <button
-                        onClick={() => handleAddComment(bill.id)}
-                        className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg px-4.5 py-1.5 transition cursor-pointer shrink-0"
-                      >
-                        Submit
-                      </button>
-                    </div>
-
-                    {/* Scrollable comment items */}
-                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                      {mergedComments.map((c, idx) => (
-                        <div key={idx} className="bg-slate-50/70 p-2.5 rounded-xl border border-slate-200/60 text-[11px] leading-normal font-medium">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-slate-800 text-[10px]">{c.author}</span>
-                            <span className="text-[9px] font-mono text-slate-400">Verified Citizen</span>
-                          </div>
-                          <p className="text-slate-600 italic">&ldquo;{c.comment}&rdquo;</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
