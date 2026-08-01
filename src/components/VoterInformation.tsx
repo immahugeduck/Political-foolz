@@ -3,7 +3,7 @@ import { Search, MapPin, CheckCircle, AlertTriangle, ShieldCheck, Mail, Phone, E
 
 export default function VoterInformation() {
   const [address, setAddress] = useState("");
-  const [voterInfo, setVoterInfo] = useState<Record<string, any> | null>(null);
+  const [voterInfo, setVoterInfo] = useState<Record<string, unknown> | null>(null);
   const [elections, setElections] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +102,7 @@ export default function VoterInformation() {
 
         {voterInfo && (
           <div className="p-6 space-y-8">
-            {voterInfo.election && (
+            {Boolean(voterInfo.election) && (
               <div>
                 <div className="np-kicker text-[--color-headline] mb-3 flex items-center gap-1.5">
                   <CheckCircle className="h-3 w-3" /> Upcoming Election

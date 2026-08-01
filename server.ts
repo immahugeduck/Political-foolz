@@ -2625,8 +2625,11 @@ async function startServer() {
       standardHeaders: true,
       legacyHeaders: false,
     });
+    // Apply the limiter before static serving so it also covers asset and
+    // index.html requests handled by express.static, not just the SPA fallback.
+    app.use(staticLimiter);
     app.use(express.static(distPath));
-    app.get("/*splat", staticLimiter, (req, res) => {
+    app.get("/*splat", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

@@ -28,8 +28,9 @@ export default function PlainLanguageDirectory({ onSelectBill }: PlainLanguageDi
       setLoading(true);
       const resp = await fetch(`/api/legislation/search?q=${encodeURIComponent(queryText)}`);
       const data = await resp.json();
-      const parsed = data.data.map((item: any) => ({
-        id: item.id || item.billId || "H.R. 4000",
+      const items = Array.isArray(data.data) ? data.data : [];
+      const parsed = items.map((item: any, idx: number) => ({
+        id: item.id || item.billId || `result-${idx}`,
         title: item.title || item.officialTitle,
         sponsor: item.sponsor || item.sponsorName || "Congressional Committee",
         status: item.status || item.outcome,
