@@ -7,7 +7,6 @@ import dotenv from "dotenv";
 import pino from "pino";
 import pinoHttp from "pino-http";
 import { GoogleGenAI, Type } from "@google/genai";
-import { createServer as createViteServer } from "vite";
 import { OpenAI } from "openai";
 import { z } from "zod";
 
@@ -32,7 +31,13 @@ if (!envResult.success) {
 const ENV = envResult.data;
 
 if (ENV.NODE_ENV === "production" && !ENV.APP_URL) {
-  throw new Error("APP_URL is required in production.");
+  // Don't hard-crash the process (and the Vercel deployment) when APP_URL is
+  // absent. The CORS configuration below already falls back to a safe set of
+  // default allowed origins (localhost + the known production hosts), so a
+  // missing APP_URL should degrade to a warning rather than a fatal error.
+  console.warn(
+    "APP_URL is not set in production; falling back to default allowed origins."
+  );
 }
 
 const app = express();
@@ -2603,6 +2608,9 @@ async function prewarmCache() {
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     console.log("Setting up Vite development middleware...");
+    // Import Vite lazily so the dev-only dependency is never bundled into the
+    // production/serverless build (@vercel/node traces top-level imports).
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -2611,8 +2619,17 @@ async function startServer() {
   } else {
     console.log("Production mode: Serving static files...");
     const distPath = path.join(process.cwd(), "dist");
+    const staticLimiter = rateLimit({
+      windowMs: 60 * 1000,
+      max: 300,
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+    // Apply the limiter before static serving so it also covers asset and
+    // index.html requests handled by express.static, not just the SPA fallback.
+    app.use(staticLimiter);
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    app.get("/*splat", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

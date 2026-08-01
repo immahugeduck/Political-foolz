@@ -102,7 +102,7 @@ export default function VoterInformation() {
 
         {voterInfo && (
           <div className="p-6 space-y-8">
-            {voterInfo.election && (
+            {Boolean(voterInfo.election) && (
               <div>
                 <div className="np-kicker text-[--color-headline] mb-3 flex items-center gap-1.5">
                   <CheckCircle className="h-3 w-3" /> Upcoming Election
